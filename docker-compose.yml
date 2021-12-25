@@ -1,0 +1,43 @@
+version: '3.1'
+
+services:
+
+  app:
+    environment:
+      MYSQL_HOST: db
+      MYSQL_USER: akhmad
+      MYSQL_PASSWORD: akhmad
+      MYSQL_DBNAME: akhmad_maulana_akbar
+    build: .
+    ports:
+      - 3030:8090
+    links:
+     - db
+
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_USER: akhmad
+      MYSQL_PASSWORD: akhmad
+      MYSQL_DBNAME: akhmad_maulana_akbar
+      MYSQL_ROOT_PASSWORD: example
+    expose:
+      - 3306
+    volumes:
+      - mysql:/var/lib/mysql
+
+  pma:
+    image: phpmyadmin:latest
+    restart: always
+    ports:
+      - 8080:80
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: example
+    links:
+      - db
+
+volumes:
+  mysql:
