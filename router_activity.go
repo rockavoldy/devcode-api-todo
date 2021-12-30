@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -39,18 +38,19 @@ func (a *Activity) list(c *fiber.Ctx) error {
 }
 
 func (a *Activity) get(c *fiber.Ctx) error {
-	activityId := c.Params("activityId")
+	activityId, _ := c.ParamsInt("activityId")
 	print := &PrintActivtyGroup{}
 
-	data, err := a.repo.GetActivity(activityId)
-	if err != nil {
+	if !a.repo.inmem[activityId] {
 		print.Status = "Not Found"
-		print.Message = fmt.Sprintf("Activity with ID %s Not Found", activityId)
+		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
 		print.Data = map[string]interface{}{}
 		c.Response().SetStatusCode(404)
 
 		return c.JSON(print)
 	}
+
+	data, _ := a.repo.GetActivity(activityId)
 
 	print.Status = "Success"
 	print.Message = "Success"
@@ -75,6 +75,7 @@ func (a *Activity) create(c *fiber.Ctx) error {
 	}
 
 	insertedId, _ := a.repo.InsertActivity(data)
+	a.repo.Add(int(insertedId))
 	dataInsert, _ := a.repo.GetActivity(insertedId)
 
 	print.Status = "Success"
@@ -86,41 +87,41 @@ func (a *Activity) create(c *fiber.Ctx) error {
 }
 
 func (a *Activity) delete(c *fiber.Ctx) error {
-	activityId := c.Params("activityId")
+	activityId, _ := c.ParamsInt("activityId")
 	print := &PrintActivtyGroup{}
 
-	deleted, _ := a.repo.DeleteActivity(activityId)
-	if !deleted {
+	if !a.repo.inmem[activityId] {
 		print.Status = "Not Found"
-		print.Message = fmt.Sprintf("Activity with ID %s Not Found", activityId)
+		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
 		c.Response().SetStatusCode(404)
-	} else {
-		print.Status = "Success"
-		print.Message = "Success"
+		return c.JSON(print)
 	}
+
+	a.repo.DeleteActivity(activityId)
+	print.Status = "Success"
+	print.Message = "Success"
 	print.Data = map[string]interface{}{}
 
 	return c.JSON(print)
 }
 
 func (a *Activity) update(c *fiber.Ctx) error {
-	activityId := c.Params("activityId")
+	activityId, _ := c.ParamsInt("activityId")
 	print := &PrintActivtyGroup{}
 	data := make(map[string]interface{})
 
 	c.BodyParser(&data)
 
-	updatedData, err := a.repo.UpdateActivity(activityId, data)
-	if err != nil {
-		log.Println(err)
+	if !a.repo.inmem[activityId] {
 		print.Status = "Not Found"
-		print.Message = fmt.Sprintf("Activity with ID %s Not Found", activityId)
+		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
 		print.Data = map[string]interface{}{}
 		c.Response().SetStatusCode(404)
 
 		return c.JSON(print)
 	}
 
+	updatedData, _ := a.repo.UpdateActivity(activityId, data)
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = updatedData

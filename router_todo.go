@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -39,19 +38,19 @@ func (t *Todo) list(c *fiber.Ctx) error {
 }
 
 func (t *Todo) get(c *fiber.Ctx) error {
-	todoId := c.Params("todoId")
+	todoId, _ := c.ParamsInt("todoId")
 	print := &PrintTodoItem{}
 
-	data, err := t.repo.GetTodo(todoId)
-	if err != nil {
+	if !t.repo.inmem[todoId] {
 		print.Status = "Not Found"
-		print.Message = fmt.Sprintf("Todo with ID %s Not Found", todoId)
+		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
 		print.Data = map[string]interface{}{}
 		c.Response().SetStatusCode(404)
 
 		return c.JSON(print)
 	}
 
+	data, _ := t.repo.GetTodo(todoId)
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = data
@@ -75,6 +74,7 @@ func (t *Todo) create(c *fiber.Ctx) error {
 	}
 
 	insertedId, _ := t.repo.InsertTodo(data)
+	t.repo.Add(int(insertedId))
 	dataInsert, _ := t.repo.GetTodo(insertedId)
 
 	print.Status = "Success"
@@ -87,42 +87,41 @@ func (t *Todo) create(c *fiber.Ctx) error {
 }
 
 func (t *Todo) delete(c *fiber.Ctx) error {
-	todoId := c.Params("todoId")
+	todoId, _ := c.ParamsInt("todoId")
 	print := &PrintTodoItem{}
 
-	deleted, _ := t.repo.DeleteTodo(todoId)
-	if !deleted {
+	if !t.repo.inmem[todoId] {
 		print.Status = "Not Found"
-		print.Message = fmt.Sprintf("Todo with ID %s Not Found", todoId)
+		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
 		c.Response().SetStatusCode(404)
-	} else {
-		print.Status = "Success"
-		print.Message = "Success"
+		return c.JSON(print)
 	}
 
+	t.repo.DeleteTodo(todoId)
+	print.Status = "Success"
+	print.Message = "Success"
 	print.Data = map[string]interface{}{}
 
 	return c.JSON(print)
 }
 
 func (t *Todo) update(c *fiber.Ctx) error {
-	todoId := c.Params("todoId")
+	todoId, _ := c.ParamsInt("todoId")
 	print := &PrintTodoItem{}
 	data := make(map[string]interface{})
 
 	c.BodyParser(&data)
 
-	updatedData, err := t.repo.UpdateTodo(todoId, data)
-	if err != nil {
-		log.Println(err)
+	if !t.repo.inmem[todoId] {
 		print.Status = "Not Found"
-		print.Message = fmt.Sprintf("Todo with ID %s Not Found", todoId)
+		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
 		print.Data = map[string]interface{}{}
 		c.Response().SetStatusCode(404)
 
 		return c.JSON(print)
 	}
 
+	updatedData, _ := t.repo.UpdateTodo(todoId, data)
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = updatedData

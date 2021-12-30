@@ -51,11 +51,26 @@ func ConnectDB(host, user, pass, dbname string) *sql.DB {
 }
 
 type Repo struct {
-	DB *sql.DB
+	DB    *sql.DB
+	inmem map[int]bool
 }
 
 func NewRepo(db *sql.DB) *Repo {
 	return &Repo{
-		DB: db,
+		DB:    db,
+		inmem: make(map[int]bool),
 	}
+}
+
+func (r *Repo) Get(index int) bool {
+	_, ok := r.inmem[index]
+	return ok
+}
+
+func (r *Repo) Add(index int) {
+	r.inmem[index] = true
+}
+
+func (r *Repo) Remove(index int) {
+	r.inmem[index] = false
 }
