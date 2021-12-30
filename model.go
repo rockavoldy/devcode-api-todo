@@ -7,8 +7,9 @@ import (
 )
 
 var (
-	ErrTitleNull      = errors.New("title cannot be null")
-	ErrRecordNotFound = errors.New("record not found")
+	ErrTitleNull           = errors.New("title cannot be null")
+	ErrActivityGroupIdNull = errors.New("activity_group_id cannot be null")
+	ErrRecordNotFound      = errors.New("record not found")
 )
 
 type ActivityGroup struct {
@@ -109,15 +110,15 @@ type TodoItem struct {
 }
 
 type PrintTodoItem struct {
-	Status  string   `json:"status,omitempty"`
-	Message string   `json:"message,omitempty"`
-	Data    TodoItem `json:"data,omitempty"`
+	Status  string                 `json:"status"`
+	Message string                 `json:"message"`
+	Data    map[string]interface{} `json:"data"`
 }
 
 type PrintTodoItems struct {
-	Status  string     `json:"status,omitempty"`
-	Message string     `json:"message,omitempty"`
-	Data    []TodoItem `json:"data,omitempty"`
+	Status  string                   `json:"status"`
+	Message string                   `json:"message"`
+	Data    []map[string]interface{} `json:"data"`
 }
 
 func NewTodoItem(activity_group_id int, title string, isActive bool, priority Priority) *TodoItem {
@@ -129,4 +130,33 @@ func NewTodoItem(activity_group_id int, title string, isActive bool, priority Pr
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
+}
+
+func (t *TodoItem) MapToInterface() map[string]interface{} {
+	if t == nil {
+		return map[string]interface{}{}
+	}
+
+	return map[string]interface{}{
+		"id":                t.ID,
+		"activity_group_id": t.ActivityGroupId,
+		"title":             t.Title,
+		"is_active":         t.IsActive,
+		"priority":          t.Priority,
+		"created_at":        t.CreatedAt,
+		"updated_at":        t.UpdatedAt,
+		"deleted_at":        t.DeletedAt,
+	}
+}
+
+func (t *TodoItem) Validate() error {
+	if t.Title == "" {
+		return ErrTitleNull
+	}
+
+	if t.ActivityGroupId == 0 {
+		return ErrActivityGroupIdNull
+	}
+
+	return nil
 }

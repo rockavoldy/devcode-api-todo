@@ -13,6 +13,8 @@ services:
       - 8090:3030
     links:
      - db
+    networks:
+      - devcode
 
   db:
     image: mysql:8.0
@@ -28,6 +30,8 @@ services:
       - mysql:/var/lib/mysql
     ports:
       - 3306:3306
+    networks:
+      - devcode
 
   pma:
     image: phpmyadmin:latest
@@ -40,6 +44,13 @@ services:
       PMA_PASSWORD: example
     links:
       - db
+    networks:
+      - devcode
 
 volumes:
   mysql:
+
+networks:
+  devcode:
+    name: devcode
+    driver: bridge
