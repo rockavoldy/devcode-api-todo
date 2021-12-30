@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
@@ -10,7 +11,13 @@ import (
 func (r *Repo) InsertTodo(todo *TodoItem) (int64, error) {
 	sqlQuery, args, _ := sq.Insert("todos").Columns("activity_group_id", "title").Values(todo.ActivityGroupId, todo.Title).ToSql()
 
-	res, err := r.DB.Exec(sqlQuery, args...)
+	conn, err := r.DB.Conn(context.Background())
+	if err != nil {
+		return 0, err
+	}
+	defer conn.Close()
+
+	res, err := conn.ExecContext(context.Background(), sqlQuery, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -22,10 +29,16 @@ func (r *Repo) InsertTodo(todo *TodoItem) (int64, error) {
 func (r *Repo) GetTodo(id interface{}) (map[string]interface{}, error) {
 	sqlQuery, args, _ := sq.Select("*").From("todos").Where(sq.Eq{"id": id}).ToSql()
 
-	row := r.DB.QueryRow(sqlQuery, args...)
+	conn, err := r.DB.Conn(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	row := conn.QueryRowContext(context.Background(), sqlQuery, args...)
 
 	var todoItem TodoItem
-	err := row.Scan(&todoItem.ID, &todoItem.ActivityGroupId, &todoItem.Title, &todoItem.IsActive, &todoItem.Priority, &todoItem.CreatedAt, &todoItem.UpdatedAt, &todoItem.DeletedAt)
+	err = row.Scan(&todoItem.ID, &todoItem.ActivityGroupId, &todoItem.Title, &todoItem.IsActive, &todoItem.Priority, &todoItem.CreatedAt, &todoItem.UpdatedAt, &todoItem.DeletedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, err
@@ -38,12 +51,13 @@ func (r *Repo) GetTodo(id interface{}) (map[string]interface{}, error) {
 func (r *Repo) GetTodos(query string) ([]map[string]interface{}, error) {
 	sqlQuery, args, _ := sq.Select("*").From("todos").Where(sq.Eq{"activity_group_id": query}).ToSql()
 
-	prep, err := r.DB.Prepare(sqlQuery)
+	conn, err := r.DB.Conn(context.Background())
 	if err != nil {
 		return nil, err
 	}
+	defer conn.Close()
 
-	rows, err := prep.Query(args...)
+	rows, err := conn.QueryContext(context.Background(), sqlQuery, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -68,9 +82,15 @@ func (r *Repo) UpdateTodo(id interface{}, columns map[string]interface{}) (map[s
 		return nil, ErrRecordNotFound
 	}
 
+	conn, err := r.DB.Conn(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
 	sqlQuery, args, _ := sq.Update("todos").Where(sq.Eq{"id": id}).SetMap(columns).ToSql()
 
-	res, err := r.DB.Exec(sqlQuery, args...)
+	res, err := conn.ExecContext(context.Background(), sqlQuery, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +107,13 @@ func (r *Repo) UpdateTodo(id interface{}, columns map[string]interface{}) (map[s
 func (r *Repo) DeleteTodo(id interface{}) (bool, error) {
 	sqlQuery, args, _ := sq.Delete("todos").Where(sq.Eq{"id": id}).ToSql()
 
-	res, err := r.DB.Exec(sqlQuery, args...)
+	conn, err := r.DB.Conn(context.Background())
+	if err != nil {
+		return false, err
+	}
+	defer conn.Close()
+
+	res, err := conn.ExecContext(context.Background(), sqlQuery, args...)
 	if err != nil {
 		return false, err
 	}
