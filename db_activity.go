@@ -8,8 +8,8 @@ import (
 )
 
 // Insert to activities
-func (r *Repo) InsertActivity(activity *ActivityGroup) (int64, error) {
-	sqlQuery, args, _ := sq.Insert("activities").Columns("email", "title").Values(activity.Email, activity.Title).ToSql()
+func (r *Repo) InsertActivity(activity map[string]string) (int64, error) {
+	sqlQuery, args, _ := sq.Insert("activities").Columns("email", "title").Values(activity["email"], activity["title"]).ToSql()
 
 	conn, err := r.DB.Conn(context.Background())
 	if err != nil {
@@ -37,14 +37,14 @@ func (r *Repo) GetActivity(id interface{}) (map[string]interface{}, error) {
 
 	row := conn.QueryRowContext(context.Background(), sqlQuery, args...)
 
-	var activity ActivityGroup
-	err = row.Scan(&activity.ID, &activity.Email, &activity.Title, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
+	var activity map[string]interface{}
+	err = row.Scan(activity["id"], activity["email"], activity["title"], activity["created_at"], activity["updated_at"], activity["deleted_at"])
 
 	if err == sql.ErrNoRows {
 		return nil, err
 	}
 
-	return activity.MapToInterface(), nil
+	return activity, nil
 }
 
 // Get activities
@@ -68,12 +68,12 @@ func (r *Repo) GetActivities() ([]map[string]interface{}, error) {
 	}
 	defer rows.Close()
 
-	activities := make([]map[string]interface{}, 0)
+	var activities []map[string]interface{}
 	for rows.Next() {
-		var activity ActivityGroup
-		rows.Scan(&activity.ID, &activity.Email, &activity.Title, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
+		var activity map[string]interface{}
+		rows.Scan(activity["id"], activity["email"], activity["title"], activity["created_at"], activity["updated_at"], activity["deleted_at"])
 
-		activityMap := activity.MapToInterface()
+		activityMap := activity
 
 		activities = append(activities, activityMap)
 	}

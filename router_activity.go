@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -75,22 +74,17 @@ func (a *Activity) get(rw http.ResponseWriter, r *http.Request) {
 
 func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
-	data := &ActivityGroup{}
+	var data map[string]string
 	print := &PrintActivtyGroup{}
 
-	start := time.Now()
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Println(err)
 	}
-	log.Println("jsondecode: ", time.Since(start))
 
-	start = time.Now()
-	err = data.Validate()
-	log.Println("validate: ", time.Since(start))
-	if err != nil {
+	if _, titleOk := data["title"]; !titleOk {
 		print.Status = "Bad Request"
-		print.Message = err.Error()
+		print.Message = ErrTitleNull.Error()
 		print.Data = map[string]interface{}{}
 		rw.WriteHeader(400)
 		resp, _ := json.Marshal(print)
@@ -99,10 +93,8 @@ func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	start = time.Now()
 	insertedId, _ := a.repo.InsertActivity(data)
 	dataInsert, _ := a.repo.GetActivity(insertedId)
-	log.Println("insert-get: ", time.Since(start))
 
 	print.Status = "Success"
 	print.Message = "Success"
@@ -138,7 +130,7 @@ func (a *Activity) update(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
 	activityId := chi.URLParam(r, "activityId")
 	print := &PrintActivtyGroup{}
-	data := make(map[string]interface{})
+	var data map[string]interface{}
 
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {

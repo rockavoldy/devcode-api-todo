@@ -8,8 +8,8 @@ import (
 )
 
 // Insert todo
-func (r *Repo) InsertTodo(todo *TodoItem) (int64, error) {
-	sqlQuery, args, _ := sq.Insert("todos").Columns("activity_group_id", "title").Values(todo.ActivityGroupId, todo.Title).ToSql()
+func (r *Repo) InsertTodo(todo map[string]interface{}) (int64, error) {
+	sqlQuery, args, _ := sq.Insert("todos").Columns("activity_group_id", "title").Values(todo["activity_group_id"], todo["title"]).ToSql()
 
 	conn, err := r.DB.Conn(context.Background())
 	if err != nil {
@@ -37,14 +37,14 @@ func (r *Repo) GetTodo(id interface{}) (map[string]interface{}, error) {
 
 	row := conn.QueryRowContext(context.Background(), sqlQuery, args...)
 
-	var todoItem TodoItem
-	err = row.Scan(&todoItem.ID, &todoItem.ActivityGroupId, &todoItem.Title, &todoItem.IsActive, &todoItem.Priority, &todoItem.CreatedAt, &todoItem.UpdatedAt, &todoItem.DeletedAt)
+	var todoItem map[string]interface{}
+	err = row.Scan(todoItem["id"], todoItem["activity_group_id"], todoItem["title"], todoItem["is_active"], todoItem["priority"], todoItem["created_at"], todoItem["updated_at"], todoItem["deleted_at"])
 
 	if err == sql.ErrNoRows {
 		return nil, err
 	}
 
-	return todoItem.MapToInterface(), nil
+	return todoItem, nil
 }
 
 // Get todos
@@ -63,12 +63,12 @@ func (r *Repo) GetTodos(query string) ([]map[string]interface{}, error) {
 	}
 	defer rows.Close()
 
-	todoItems := make([]map[string]interface{}, 0)
+	var todoItems []map[string]interface{}
 	for rows.Next() {
-		var todoItem TodoItem
-		rows.Scan(&todoItem.ID, &todoItem.ActivityGroupId, &todoItem.Title, &todoItem.IsActive, &todoItem.Priority, &todoItem.CreatedAt, &todoItem.UpdatedAt, &todoItem.DeletedAt)
+		var todoItem map[string]interface{}
+		rows.Scan(todoItem["id"], todoItem["activity_group_id"], todoItem["title"], todoItem["is_active"], todoItem["priority"], todoItem["created_at"], todoItem["updated_at"], todoItem["deleted_at"])
 
-		todoItemMap := todoItem.MapToInterface()
+		todoItemMap := todoItem
 
 		todoItems = append(todoItems, todoItemMap)
 	}

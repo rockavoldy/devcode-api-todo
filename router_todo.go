@@ -74,7 +74,7 @@ func (t *Todo) get(rw http.ResponseWriter, r *http.Request) {
 
 func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
-	data := &TodoItem{}
+	var data map[string]interface{}
 	print := &PrintTodoItem{}
 
 	err := json.NewDecoder(r.Body).Decode(&data)
@@ -82,9 +82,20 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	if err := data.Validate(); err != nil {
+	if _, ok := data["activity_group_id"]; !ok {
 		print.Status = "Bad Request"
-		print.Message = err.Error()
+		print.Message = ErrActivityGroupIdNull.Error()
+		print.Data = map[string]interface{}{}
+		rw.WriteHeader(400)
+		resp, _ := json.Marshal(print)
+
+		rw.Write([]byte(resp))
+		return
+	}
+
+	if _, ok := data["title"]; !ok {
+		print.Status = "Bad Request"
+		print.Message = ErrTitleNull.Error()
 		print.Data = map[string]interface{}{}
 		rw.WriteHeader(400)
 		resp, _ := json.Marshal(print)
