@@ -1,10 +1,9 @@
 version: '3.1'
 
 services:
-
   app:
     environment:
-      MYSQL_HOST: db:3306
+      MYSQL_HOST: db
       MYSQL_USER: root
       MYSQL_PASSWORD: example
       MYSQL_DBNAME: akhmad_maulana_akbar
@@ -15,24 +14,20 @@ services:
      - db
     networks:
       - devcode
-
   db:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_USER: akhmad
-      MYSQL_PASSWORD: akhmad
-      MYSQL_DBNAME: akhmad_maulana_akbar
-      MYSQL_ROOT_PASSWORD: example
+    - MYSQL_ROOT_PASSWORD=example
+    - MYSQL_DATABASE=akhmad_maulana_akbar
+    - MYSQL_USER=root
+    - MYSQL_PASSWORD=secret
     expose:
       - 3306
-    volumes:
-      - mysql:/var/lib/mysql
     ports:
       - 3306:3306
     networks:
       - devcode
-
   pma:
     image: phpmyadmin:latest
     restart: always
@@ -46,10 +41,6 @@ services:
       - db
     networks:
       - devcode
-
-volumes:
-  mysql:
-
 networks:
   devcode:
     name: devcode

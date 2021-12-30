@@ -1,6 +1,3 @@
-CREATE IF NOT EXISTS DATABASE akhmad_maulana_akbar;
-USE akhmad_maulana_akbar;
-
 CREATE TABLE IF NOT EXISTS activities (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL,

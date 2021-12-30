@@ -37,8 +37,8 @@ func main() {
 	}
 
 	db := ConnectDB(mysql_host, mysql_user, mysql_password, mysql_dbname)
-	defer db.Close()
 	repo := NewRepo(db)
+	defer repo.DB.Close()
 
 	router := chi.NewRouter()
 

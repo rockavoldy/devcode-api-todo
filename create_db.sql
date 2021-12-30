@@ -1,0 +1,1 @@
+CREATE DATABASE IF NOT EXISTS akhmad_maulana_akbar;
