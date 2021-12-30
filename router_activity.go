@@ -1,6 +1,8 @@
 package main
 
 import (
+	"devcode-api-todo/model"
+	"devcode-api-todo/repo"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,16 +12,16 @@ import (
 )
 
 type Activity struct {
-	repo *Repo
+	repo *repo.Repo
 }
 
-func NewActivity(repo *Repo) *Activity {
+func NewActivity(repo *repo.Repo) *Activity {
 	return &Activity{
 		repo: repo,
 	}
 }
 
-func RouterActivity(repo *Repo) http.Handler {
+func RouterActivity(repo *repo.Repo) http.Handler {
 	activity := NewActivity(repo)
 
 	router := chi.NewRouter()
@@ -35,7 +37,7 @@ func RouterActivity(repo *Repo) http.Handler {
 func (a *Activity) list(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
 	data, _ := a.repo.GetActivities()
-	print := &PrintActivityGroups{
+	print := &model.PrintActivityGroups{
 		Status:  "Success",
 		Message: "Success",
 		Data:    data,
@@ -50,7 +52,7 @@ func (a *Activity) list(rw http.ResponseWriter, r *http.Request) {
 func (a *Activity) get(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
 	activityId := chi.URLParam(r, "activityId")
-	print := &PrintActivtyGroup{}
+	print := &model.PrintActivtyGroup{}
 
 	data, err := a.repo.GetActivity(activityId)
 	if err != nil {
@@ -75,7 +77,7 @@ func (a *Activity) get(rw http.ResponseWriter, r *http.Request) {
 func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
 	var data map[string]string
-	print := &PrintActivtyGroup{}
+	print := &model.PrintActivtyGroup{}
 
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
@@ -84,7 +86,7 @@ func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 
 	if _, titleOk := data["title"]; !titleOk {
 		print.Status = "Bad Request"
-		print.Message = ErrTitleNull.Error()
+		print.Message = model.ErrTitleNull.Error()
 		print.Data = map[string]interface{}{}
 		rw.WriteHeader(400)
 		resp, _ := json.Marshal(print)
@@ -93,8 +95,7 @@ func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	insertedId, _ := a.repo.InsertActivity(data)
-	dataInsert, _ := a.repo.GetActivity(insertedId)
+	dataInsert, _ := a.repo.InsertActivity(data)
 
 	print.Status = "Success"
 	print.Message = "Success"
@@ -108,7 +109,7 @@ func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 func (a *Activity) delete(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
 	activityId := chi.URLParam(r, "activityId")
-	print := &PrintActivtyGroup{}
+	print := &model.PrintActivtyGroup{}
 
 	deleted, _ := a.repo.DeleteActivity(activityId)
 	if !deleted {
@@ -129,7 +130,7 @@ func (a *Activity) delete(rw http.ResponseWriter, r *http.Request) {
 func (a *Activity) update(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
 	activityId := chi.URLParam(r, "activityId")
-	print := &PrintActivtyGroup{}
+	print := &model.PrintActivtyGroup{}
 	var data map[string]interface{}
 
 	err := json.NewDecoder(r.Body).Decode(&data)

@@ -1,28 +1,31 @@
-package main
+package repo
 
 import (
 	"context"
 	"database/sql"
+	"devcode-api-todo/model"
 
 	sq "github.com/Masterminds/squirrel"
 )
 
 // Insert todo
-func (r *Repo) InsertTodo(todo map[string]interface{}) (int64, error) {
+func (r *Repo) InsertTodo(todo map[string]interface{}) (map[string]interface{}, error) {
 	sqlQuery, args, _ := sq.Insert("todos").Columns("activity_group_id", "title").Values(todo["activity_group_id"], todo["title"]).ToSql()
 
 	conn, err := r.DB.Conn(context.Background())
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer conn.Close()
 
 	res, err := conn.ExecContext(context.Background(), sqlQuery, args...)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return res.LastInsertId()
+	lastInsertId, _ := res.LastInsertId()
+
+	return r.GetTodo(lastInsertId)
 }
 
 // Get todo
@@ -37,7 +40,7 @@ func (r *Repo) GetTodo(id interface{}) (map[string]interface{}, error) {
 
 	row := conn.QueryRowContext(context.Background(), sqlQuery, args...)
 
-	todoItem := &TodoItem{}
+	todoItem := &model.TodoItem{}
 	err = row.Scan(&todoItem.ID, &todoItem.ActivityGroupId, &todoItem.Title, &todoItem.IsActive, &todoItem.Priority, &todoItem.CreatedAt, &todoItem.UpdatedAt, &todoItem.DeletedAt)
 
 	if err == sql.ErrNoRows {
@@ -65,7 +68,7 @@ func (r *Repo) GetTodos(query string) ([]map[string]interface{}, error) {
 
 	todoItems := make([]map[string]interface{}, 0)
 	for rows.Next() {
-		todoItem := &TodoItem{}
+		todoItem := &model.TodoItem{}
 		rows.Scan(&todoItem.ID, &todoItem.ActivityGroupId, &todoItem.Title, &todoItem.IsActive, &todoItem.Priority, &todoItem.CreatedAt, &todoItem.UpdatedAt, &todoItem.DeletedAt)
 
 		todoItemMap := todoItem.MapToInterface()
@@ -80,7 +83,7 @@ func (r *Repo) GetTodos(query string) ([]map[string]interface{}, error) {
 func (r *Repo) UpdateTodo(id interface{}, columns map[string]interface{}) (map[string]interface{}, error) {
 	_, err := r.GetTodo(id)
 	if err == sql.ErrNoRows {
-		return nil, ErrRecordNotFound
+		return nil, model.ErrRecordNotFound
 	}
 
 	conn, err := r.DB.Conn(context.Background())
@@ -101,7 +104,7 @@ func (r *Repo) UpdateTodo(id interface{}, columns map[string]interface{}) (map[s
 		return r.GetTodo(id)
 	}
 
-	return nil, ErrRecordNotFound
+	return nil, model.ErrRecordNotFound
 }
 
 // Delete todo

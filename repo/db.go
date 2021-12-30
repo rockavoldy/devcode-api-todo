@@ -1,6 +1,7 @@
-package main
+package repo
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -44,8 +45,8 @@ func ConnectDB(host, user, pass, dbname string) *sql.DB {
 		deleted_at DATETIME, 
 		FOREIGN KEY(activity_group_id) REFERENCES activities(id));`
 
-	db.Exec(queryTableActivities)
-	db.Exec(queryTableTodos)
+	db.ExecContext(context.Background(), queryTableActivities)
+	db.ExecContext(context.Background(), queryTableTodos)
 
 	return db
 }

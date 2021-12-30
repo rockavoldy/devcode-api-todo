@@ -1,6 +1,8 @@
 package main
 
 import (
+	"devcode-api-todo/model"
+	"devcode-api-todo/repo"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,16 +12,16 @@ import (
 )
 
 type Todo struct {
-	repo *Repo
+	repo *repo.Repo
 }
 
-func NewTodo(repo *Repo) *Todo {
+func NewTodo(repo *repo.Repo) *Todo {
 	return &Todo{
 		repo: repo,
 	}
 }
 
-func RouterTodo(repo *Repo) http.Handler {
+func RouterTodo(repo *repo.Repo) http.Handler {
 	todo := NewTodo(repo)
 	router := chi.NewRouter()
 	router.Get("/", todo.list)
@@ -35,7 +37,7 @@ func (t *Todo) list(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
 	activityGroupId := r.URL.Query().Get("activity_group_id")
 	data, _ := t.repo.GetTodos(activityGroupId)
-	print := &PrintTodoItems{
+	print := &model.PrintTodoItems{
 		Status:  "Success",
 		Message: "Success",
 		Data:    data,
@@ -50,7 +52,7 @@ func (t *Todo) list(rw http.ResponseWriter, r *http.Request) {
 func (t *Todo) get(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
 	todoId := chi.URLParam(r, "todoId")
-	print := &PrintTodoItem{}
+	print := &model.PrintTodoItem{}
 
 	data, err := t.repo.GetTodo(todoId)
 	if err != nil {
@@ -75,7 +77,7 @@ func (t *Todo) get(rw http.ResponseWriter, r *http.Request) {
 func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
 	var data map[string]interface{}
-	print := &PrintTodoItem{}
+	print := &model.PrintTodoItem{}
 
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
@@ -84,7 +86,7 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 
 	if _, ok := data["activity_group_id"]; !ok {
 		print.Status = "Bad Request"
-		print.Message = ErrActivityGroupIdNull.Error()
+		print.Message = model.ErrActivityGroupIdNull.Error()
 		print.Data = map[string]interface{}{}
 		rw.WriteHeader(400)
 		resp, _ := json.Marshal(print)
@@ -95,7 +97,7 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 
 	if _, ok := data["title"]; !ok {
 		print.Status = "Bad Request"
-		print.Message = ErrTitleNull.Error()
+		print.Message = model.ErrTitleNull.Error()
 		print.Data = map[string]interface{}{}
 		rw.WriteHeader(400)
 		resp, _ := json.Marshal(print)
@@ -104,8 +106,7 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	insertedId, _ := t.repo.InsertTodo(data)
-	dataInsert, _ := t.repo.GetTodo(insertedId)
+	dataInsert, _ := t.repo.InsertTodo(data)
 
 	print.Status = "Success"
 	print.Message = "Success"
@@ -119,7 +120,7 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 func (t *Todo) delete(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
 	todoId := chi.URLParam(r, "todoId")
-	print := &PrintTodoItem{}
+	print := &model.PrintTodoItem{}
 
 	deleted, _ := t.repo.DeleteTodo(todoId)
 	if !deleted {
@@ -140,7 +141,7 @@ func (t *Todo) delete(rw http.ResponseWriter, r *http.Request) {
 func (t *Todo) update(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
 	todoId := chi.URLParam(r, "todoId")
-	print := &PrintTodoItem{}
+	print := &model.PrintTodoItem{}
 	data := make(map[string]interface{})
 
 	err := json.NewDecoder(r.Body).Decode(&data)

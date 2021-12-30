@@ -1,28 +1,31 @@
-package main
+package repo
 
 import (
 	"context"
 	"database/sql"
+	"devcode-api-todo/model"
 
 	sq "github.com/Masterminds/squirrel"
 )
 
 // Insert to activities
-func (r *Repo) InsertActivity(activity map[string]string) (int64, error) {
+func (r *Repo) InsertActivity(activity map[string]string) (map[string]interface{}, error) {
 	sqlQuery, args, _ := sq.Insert("activities").Columns("email", "title").Values(activity["email"], activity["title"]).ToSql()
 
 	conn, err := r.DB.Conn(context.Background())
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer conn.Close()
 
 	res, err := conn.ExecContext(context.Background(), sqlQuery, args...)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return res.LastInsertId()
+	lastInsertId, _ := res.LastInsertId()
+
+	return r.GetActivity(lastInsertId)
 }
 
 // Get activity
@@ -37,7 +40,7 @@ func (r *Repo) GetActivity(id interface{}) (map[string]interface{}, error) {
 
 	row := conn.QueryRowContext(context.Background(), sqlQuery, args...)
 
-	activity := &ActivityGroup{}
+	activity := &model.ActivityGroup{}
 	err = row.Scan(&activity.ID, &activity.Email, &activity.Title, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
 
 	if err == sql.ErrNoRows {
@@ -70,7 +73,7 @@ func (r *Repo) GetActivities() ([]map[string]interface{}, error) {
 
 	activities := make([]map[string]interface{}, 0)
 	for rows.Next() {
-		activity := &ActivityGroup{}
+		activity := &model.ActivityGroup{}
 		rows.Scan(&activity.ID, &activity.Email, &activity.Title, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
 
 		activityMap := activity.MapToInterface()
@@ -85,7 +88,7 @@ func (r *Repo) GetActivities() ([]map[string]interface{}, error) {
 func (r *Repo) UpdateActivity(id interface{}, columns map[string]interface{}) (map[string]interface{}, error) {
 	_, err := r.GetActivity(id)
 	if err == sql.ErrNoRows {
-		return nil, ErrRecordNotFound
+		return nil, model.ErrRecordNotFound
 	}
 
 	sqlQuery, args, _ := sq.Update("activities").Where(sq.Eq{"id": id}).SetMap(columns).ToSql()
@@ -106,7 +109,7 @@ func (r *Repo) UpdateActivity(id interface{}, columns map[string]interface{}) (m
 		return r.GetActivity(id)
 	}
 
-	return nil, ErrRecordNotFound
+	return nil, model.ErrRecordNotFound
 }
 
 // Delete activity
