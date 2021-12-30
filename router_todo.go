@@ -41,7 +41,7 @@ func (t *Todo) get(c *fiber.Ctx) error {
 	todoId, _ := c.ParamsInt("todoId")
 	print := &PrintTodoItem{}
 
-	if !t.repo.inmem[todoId] {
+	if !t.repo.inmemTo[todoId] {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
 		print.Data = map[string]interface{}{}
@@ -74,7 +74,7 @@ func (t *Todo) create(c *fiber.Ctx) error {
 	}
 
 	insertedId, _ := t.repo.InsertTodo(data)
-	t.repo.Add(int(insertedId))
+	t.repo.AddTo(int(insertedId))
 	dataInsert, _ := t.repo.GetTodo(insertedId)
 
 	print.Status = "Success"
@@ -90,7 +90,7 @@ func (t *Todo) delete(c *fiber.Ctx) error {
 	todoId, _ := c.ParamsInt("todoId")
 	print := &PrintTodoItem{}
 
-	if !t.repo.inmem[todoId] {
+	if !t.repo.inmemTo[todoId] {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
 		c.Response().SetStatusCode(404)
@@ -98,6 +98,7 @@ func (t *Todo) delete(c *fiber.Ctx) error {
 	}
 
 	t.repo.DeleteTodo(todoId)
+	t.repo.RemoveTo(todoId)
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = map[string]interface{}{}
@@ -112,7 +113,7 @@ func (t *Todo) update(c *fiber.Ctx) error {
 
 	c.BodyParser(&data)
 
-	if !t.repo.inmem[todoId] {
+	if !t.repo.inmemTo[todoId] {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
 		print.Data = map[string]interface{}{}

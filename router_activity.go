@@ -41,7 +41,7 @@ func (a *Activity) get(c *fiber.Ctx) error {
 	activityId, _ := c.ParamsInt("activityId")
 	print := &PrintActivtyGroup{}
 
-	if !a.repo.inmem[activityId] {
+	if !a.repo.inmemAct[activityId] {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
 		print.Data = map[string]interface{}{}
@@ -75,7 +75,7 @@ func (a *Activity) create(c *fiber.Ctx) error {
 	}
 
 	insertedId, _ := a.repo.InsertActivity(data)
-	a.repo.Add(int(insertedId))
+	a.repo.AddAct(int(insertedId))
 	dataInsert, _ := a.repo.GetActivity(insertedId)
 
 	print.Status = "Success"
@@ -90,7 +90,7 @@ func (a *Activity) delete(c *fiber.Ctx) error {
 	activityId, _ := c.ParamsInt("activityId")
 	print := &PrintActivtyGroup{}
 
-	if !a.repo.inmem[activityId] {
+	if !a.repo.inmemAct[activityId] {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
 		c.Response().SetStatusCode(404)
@@ -98,6 +98,7 @@ func (a *Activity) delete(c *fiber.Ctx) error {
 	}
 
 	a.repo.DeleteActivity(activityId)
+	a.repo.RemoveAct(activityId)
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = map[string]interface{}{}
@@ -112,7 +113,7 @@ func (a *Activity) update(c *fiber.Ctx) error {
 
 	c.BodyParser(&data)
 
-	if !a.repo.inmem[activityId] {
+	if !a.repo.inmemAct[activityId] {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
 		print.Data = map[string]interface{}{}

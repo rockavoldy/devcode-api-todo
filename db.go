@@ -22,8 +22,8 @@ func ConnectDB(host, user, pass, dbname string) *sql.DB {
 	}
 
 	log.Println("Successfully connected to db server")
-	db.SetMaxIdleConns(1000)
-	db.SetMaxOpenConns(0)
+	db.SetMaxIdleConns(10)
+	db.SetMaxOpenConns(1000)
 
 	queryTableActivities := `CREATE TABLE IF NOT EXISTS activities(
 		id INT AUTO_INCREMENT PRIMARY KEY, 
@@ -51,26 +51,41 @@ func ConnectDB(host, user, pass, dbname string) *sql.DB {
 }
 
 type Repo struct {
-	DB    *sql.DB
-	inmem map[int]bool
+	DB       *sql.DB
+	inmemAct map[int]bool
+	inmemTo  map[int]bool
 }
 
 func NewRepo(db *sql.DB) *Repo {
 	return &Repo{
-		DB:    db,
-		inmem: make(map[int]bool),
+		DB:       db,
+		inmemAct: make(map[int]bool),
+		inmemTo:  make(map[int]bool),
 	}
 }
 
-func (r *Repo) Get(index int) bool {
-	_, ok := r.inmem[index]
+func (r *Repo) GetAct(index int) bool {
+	_, ok := r.inmemAct[index]
 	return ok
 }
 
-func (r *Repo) Add(index int) {
-	r.inmem[index] = true
+func (r *Repo) AddAct(index int) {
+	r.inmemAct[index] = true
 }
 
-func (r *Repo) Remove(index int) {
-	r.inmem[index] = false
+func (r *Repo) RemoveAct(index int) {
+	delete(r.inmemAct, index)
+}
+
+func (r *Repo) GetTo(index int) bool {
+	_, ok := r.inmemTo[index]
+	return ok
+}
+
+func (r *Repo) AddTo(index int) {
+	r.inmemTo[index] = true
+}
+
+func (r *Repo) RemoveTo(index int) {
+	delete(r.inmemTo, index)
 }
