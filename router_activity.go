@@ -139,7 +139,6 @@ func (a *Activity) update(rw http.ResponseWriter, r *http.Request) {
 
 	updatedData, err := a.repo.UpdateActivity(activityId, data)
 	if err != nil {
-		log.Println(err)
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Activity with ID %s Not Found", activityId)
 		print.Data = map[string]interface{}{}

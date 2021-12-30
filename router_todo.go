@@ -150,7 +150,6 @@ func (t *Todo) update(rw http.ResponseWriter, r *http.Request) {
 
 	updatedData, err := t.repo.UpdateTodo(todoId, data)
 	if err != nil {
-		log.Println(err)
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Todo with ID %s Not Found", todoId)
 		print.Data = map[string]interface{}{}

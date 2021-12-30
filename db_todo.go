@@ -37,14 +37,14 @@ func (r *Repo) GetTodo(id interface{}) (map[string]interface{}, error) {
 
 	row := conn.QueryRowContext(context.Background(), sqlQuery, args...)
 
-	var todoItem map[string]interface{}
-	err = row.Scan(todoItem["id"], todoItem["activity_group_id"], todoItem["title"], todoItem["is_active"], todoItem["priority"], todoItem["created_at"], todoItem["updated_at"], todoItem["deleted_at"])
+	todoItem := &TodoItem{}
+	err = row.Scan(&todoItem.ID, &todoItem.ActivityGroupId, &todoItem.Title, &todoItem.IsActive, &todoItem.Priority, &todoItem.CreatedAt, &todoItem.UpdatedAt, &todoItem.DeletedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, err
 	}
 
-	return todoItem, nil
+	return todoItem.MapToInterface(), nil
 }
 
 // Get todos
@@ -63,12 +63,12 @@ func (r *Repo) GetTodos(query string) ([]map[string]interface{}, error) {
 	}
 	defer rows.Close()
 
-	var todoItems []map[string]interface{}
+	todoItems := make([]map[string]interface{}, 0)
 	for rows.Next() {
-		var todoItem map[string]interface{}
-		rows.Scan(todoItem["id"], todoItem["activity_group_id"], todoItem["title"], todoItem["is_active"], todoItem["priority"], todoItem["created_at"], todoItem["updated_at"], todoItem["deleted_at"])
+		todoItem := &TodoItem{}
+		rows.Scan(&todoItem.ID, &todoItem.ActivityGroupId, &todoItem.Title, &todoItem.IsActive, &todoItem.Priority, &todoItem.CreatedAt, &todoItem.UpdatedAt, &todoItem.DeletedAt)
 
-		todoItemMap := todoItem
+		todoItemMap := todoItem.MapToInterface()
 
 		todoItems = append(todoItems, todoItemMap)
 	}

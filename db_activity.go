@@ -37,14 +37,14 @@ func (r *Repo) GetActivity(id interface{}) (map[string]interface{}, error) {
 
 	row := conn.QueryRowContext(context.Background(), sqlQuery, args...)
 
-	var activity map[string]interface{}
-	err = row.Scan(activity["id"], activity["email"], activity["title"], activity["created_at"], activity["updated_at"], activity["deleted_at"])
+	activity := &ActivityGroup{}
+	err = row.Scan(&activity.ID, &activity.Email, &activity.Title, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, err
 	}
 
-	return activity, nil
+	return activity.MapToInterface(), nil
 }
 
 // Get activities
@@ -68,12 +68,12 @@ func (r *Repo) GetActivities() ([]map[string]interface{}, error) {
 	}
 	defer rows.Close()
 
-	var activities []map[string]interface{}
+	activities := make([]map[string]interface{}, 0)
 	for rows.Next() {
-		var activity map[string]interface{}
-		rows.Scan(activity["id"], activity["email"], activity["title"], activity["created_at"], activity["updated_at"], activity["deleted_at"])
+		activity := &ActivityGroup{}
+		rows.Scan(&activity.ID, &activity.Email, &activity.Title, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
 
-		activityMap := activity
+		activityMap := activity.MapToInterface()
 
 		activities = append(activities, activityMap)
 	}
