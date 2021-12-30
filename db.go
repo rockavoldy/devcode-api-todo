@@ -22,8 +22,8 @@ func ConnectDB(host, user, pass, dbname string) *sql.DB {
 	}
 
 	log.Println("Successfully connected to db server")
-	db.SetMaxIdleConns(1000)
-	db.SetMaxOpenConns(0)
+	db.SetMaxIdleConns(10)
+	db.SetMaxOpenConns(100)
 
 	queryTableActivities := `CREATE TABLE IF NOT EXISTS activities(
 		id INT AUTO_INCREMENT PRIMARY KEY, 

@@ -8,14 +8,6 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func ReturnJson(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "Application/json")
-
-		next.ServeHTTP(rw, r)
-	})
-}
-
 func main() {
 	mysql_host := os.Getenv("MYSQL_HOST")
 	if mysql_host == "" {
@@ -36,14 +28,8 @@ func main() {
 
 	db := ConnectDB(mysql_host, mysql_user, mysql_password, mysql_dbname)
 	repo := NewRepo(db)
-	defer repo.DB.Close()
 
 	router := chi.NewRouter()
-	router.Use(ReturnJson)
-
-	router.Get("/", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Write([]byte("Hello, World!\nDevcode Challenge #2"))
-	})
 
 	router.Mount("/activity-groups", RouterActivity(repo))
 	router.Mount("/todo-items", RouterTodo(repo))

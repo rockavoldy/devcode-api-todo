@@ -32,6 +32,7 @@ func RouterTodo(repo *Repo) http.Handler {
 }
 
 func (t *Todo) list(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "Application/json")
 	activityGroupId := r.URL.Query().Get("activity_group_id")
 	data, _ := t.repo.GetTodos(activityGroupId)
 	print := &PrintTodoItems{
@@ -47,6 +48,7 @@ func (t *Todo) list(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (t *Todo) get(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "Application/json")
 	todoId := chi.URLParam(r, "todoId")
 	print := &PrintTodoItem{}
 
@@ -71,6 +73,7 @@ func (t *Todo) get(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "Application/json")
 	data := &TodoItem{}
 	print := &PrintTodoItem{}
 
@@ -103,6 +106,7 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (t *Todo) delete(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "Application/json")
 	todoId := chi.URLParam(r, "todoId")
 	print := &PrintTodoItem{}
 
@@ -123,6 +127,7 @@ func (t *Todo) delete(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (t *Todo) update(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "Application/json")
 	todoId := chi.URLParam(r, "todoId")
 	print := &PrintTodoItem{}
 	data := make(map[string]interface{})

@@ -61,6 +61,7 @@ func (r *Repo) GetTodos(query string) ([]map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	todoItems := make([]map[string]interface{}, 0)
 	for rows.Next() {

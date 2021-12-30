@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -33,6 +34,7 @@ func RouterActivity(repo *Repo) http.Handler {
 }
 
 func (a *Activity) list(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "Application/json")
 	data, _ := a.repo.GetActivities()
 	print := &PrintActivityGroups{
 		Status:  "Success",
@@ -47,6 +49,7 @@ func (a *Activity) list(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Activity) get(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "Application/json")
 	activityId := chi.URLParam(r, "activityId")
 	print := &PrintActivtyGroup{}
 
@@ -71,15 +74,21 @@ func (a *Activity) get(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "Application/json")
 	data := &ActivityGroup{}
 	print := &PrintActivtyGroup{}
 
+	start := time.Now()
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Println(err)
 	}
+	log.Println("jsondecode: ", time.Since(start))
 
-	if err := data.Validate(); err != nil {
+	start = time.Now()
+	err = data.Validate()
+	log.Println("validate: ", time.Since(start))
+	if err != nil {
 		print.Status = "Bad Request"
 		print.Message = err.Error()
 		print.Data = map[string]interface{}{}
@@ -90,8 +99,10 @@ func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	start = time.Now()
 	insertedId, _ := a.repo.InsertActivity(data)
 	dataInsert, _ := a.repo.GetActivity(insertedId)
+	log.Println("insert-get: ", time.Since(start))
 
 	print.Status = "Success"
 	print.Message = "Success"
@@ -103,6 +114,7 @@ func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Activity) delete(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "Application/json")
 	activityId := chi.URLParam(r, "activityId")
 	print := &PrintActivtyGroup{}
 
@@ -123,6 +135,7 @@ func (a *Activity) delete(rw http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Activity) update(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "Application/json")
 	activityId := chi.URLParam(r, "activityId")
 	print := &PrintActivtyGroup{}
 	data := make(map[string]interface{})

@@ -66,6 +66,7 @@ func (r *Repo) GetActivities() ([]map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	activities := make([]map[string]interface{}, 0)
 	for rows.Next() {
