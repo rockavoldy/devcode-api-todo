@@ -4,13 +4,13 @@ services:
 
   app:
     environment:
-      MYSQL_HOST: db
-      MYSQL_USER: akhmad
-      MYSQL_PASSWORD: akhmad
+      MYSQL_HOST: db:3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: example
       MYSQL_DBNAME: akhmad_maulana_akbar
     build: .
     ports:
-      - 3030:8090
+      - 8090:3030
     links:
      - db
 
@@ -26,6 +26,8 @@ services:
       - 3306
     volumes:
       - mysql:/var/lib/mysql
+    ports:
+      - 3306:3306
 
   pma:
     image: phpmyadmin:latest

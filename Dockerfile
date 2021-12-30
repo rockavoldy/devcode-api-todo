@@ -8,10 +8,9 @@ ENV MYSQL_USER "$MYSQL_USER"
 ENV MYSQL_PASSWORD "$MYSQL_PASSWORD"
 ENV MYSQL_DBNAME "$MYSQL_DBNAME"
 RUN go mod download && go mod tidy && go vet . && go build -ldflags="-s -w" -o devcode .
-RUN rm -rf Dockerfile go.mod go.sum
 
-FROM gcr.io/distroless/base
+FROM alpine:3.15.0
 COPY --from=build /app/devcode /devcode
-EXPOSE 8090
+EXPOSE 3030
 
 CMD ["./devcode"]
