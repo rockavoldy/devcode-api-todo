@@ -1,12 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/gofiber/fiber/v2"
 )
 
 type Activity struct {
@@ -19,20 +17,17 @@ func NewActivity(repo *Repo) *Activity {
 	}
 }
 
-func RouterActivity(repo *Repo) http.Handler {
+func RouterActivity(router fiber.Router, repo *Repo) {
 	activity := NewActivity(repo)
 
-	router := chi.NewRouter()
 	router.Get("/", activity.list)
-	router.Get("/{activityId}", activity.get)
+	router.Get("/:activityId", activity.get)
 	router.Post("/", activity.create)
-	router.Delete("/{activityId}", activity.delete)
-	router.Patch("/{activityId}", activity.update)
-
-	return router
+	router.Delete("/:activityId", activity.delete)
+	router.Patch("/:activityId", activity.update)
 }
 
-func (a *Activity) list(rw http.ResponseWriter, r *http.Request) {
+func (a *Activity) list(c *fiber.Ctx) error {
 	data, _ := a.repo.GetActivities()
 	print := &PrintActivityGroups{
 		Status:  "Success",
@@ -40,14 +35,11 @@ func (a *Activity) list(rw http.ResponseWriter, r *http.Request) {
 		Data:    data,
 	}
 
-	resp, _ := json.Marshal(print)
-
-	rw.WriteHeader(200)
-	rw.Write([]byte(resp))
+	return c.JSON(print)
 }
 
-func (a *Activity) get(rw http.ResponseWriter, r *http.Request) {
-	activityId := chi.URLParam(r, "activityId")
+func (a *Activity) get(c *fiber.Ctx) error {
+	activityId := c.Params("activityId")
 	print := &PrintActivtyGroup{}
 
 	data, err := a.repo.GetActivity(activityId)
@@ -55,39 +47,31 @@ func (a *Activity) get(rw http.ResponseWriter, r *http.Request) {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Activity with ID %s Not Found", activityId)
 		print.Data = map[string]interface{}{}
-		rw.WriteHeader(404)
+		c.Response().SetStatusCode(404)
 
-		resp, _ := json.Marshal(print)
-		rw.Write([]byte(resp))
-		return
+		return c.JSON(print)
 	}
 
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = data
-	rw.WriteHeader(200)
-	resp, _ := json.Marshal(print)
-	rw.Write([]byte(resp))
+
+	return c.JSON(print)
 }
 
-func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
-	data := &ActivityGroup{}
+func (a *Activity) create(c *fiber.Ctx) error {
+	data := new(ActivityGroup)
 	print := &PrintActivtyGroup{}
 
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		log.Println(err)
-	}
+	c.BodyParser(&data)
 
 	if err := data.Validate(); err != nil {
 		print.Status = "Bad Request"
 		print.Message = err.Error()
 		print.Data = map[string]interface{}{}
-		rw.WriteHeader(400)
-		resp, _ := json.Marshal(print)
+		c.Response().SetStatusCode(400)
 
-		rw.Write([]byte(resp))
-		return
+		return c.JSON(print)
 	}
 
 	insertedId, _ := a.repo.InsertActivity(data)
@@ -96,41 +80,35 @@ func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = dataInsert
-	rw.WriteHeader(201)
-	resp, _ := json.Marshal(print)
+	c.Response().SetStatusCode(201)
 
-	rw.Write([]byte(resp))
+	return c.JSON(print)
 }
 
-func (a *Activity) delete(rw http.ResponseWriter, r *http.Request) {
-	activityId := chi.URLParam(r, "activityId")
+func (a *Activity) delete(c *fiber.Ctx) error {
+	activityId := c.Params("activityId")
 	print := &PrintActivtyGroup{}
 
 	deleted, _ := a.repo.DeleteActivity(activityId)
 	if !deleted {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Activity with ID %s Not Found", activityId)
-		rw.WriteHeader(404)
+		c.Response().SetStatusCode(404)
 	} else {
 		print.Status = "Success"
 		print.Message = "Success"
-		rw.WriteHeader(200)
 	}
-
 	print.Data = map[string]interface{}{}
-	resp, _ := json.Marshal(print)
-	rw.Write([]byte(resp))
+
+	return c.JSON(print)
 }
 
-func (a *Activity) update(rw http.ResponseWriter, r *http.Request) {
-	activityId := chi.URLParam(r, "activityId")
+func (a *Activity) update(c *fiber.Ctx) error {
+	activityId := c.Params("activityId")
 	print := &PrintActivtyGroup{}
 	data := make(map[string]interface{})
 
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		log.Println(err)
-	}
+	c.BodyParser(&data)
 
 	updatedData, err := a.repo.UpdateActivity(activityId, data)
 	if err != nil {
@@ -138,17 +116,14 @@ func (a *Activity) update(rw http.ResponseWriter, r *http.Request) {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Activity with ID %s Not Found", activityId)
 		print.Data = map[string]interface{}{}
-		rw.WriteHeader(404)
-		resp, _ := json.Marshal(print)
+		c.Response().SetStatusCode(404)
 
-		rw.Write([]byte(resp))
-		return
+		return c.JSON(print)
 	}
 
 	print.Status = "Success"
 	print.Message = "Success"
-	rw.WriteHeader(200)
 	print.Data = updatedData
-	resp, _ := json.Marshal(print)
-	rw.Write([]byte(resp))
+
+	return c.JSON(print)
 }

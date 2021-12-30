@@ -1,12 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/gofiber/fiber/v2"
 )
 
 type Todo struct {
@@ -19,20 +17,17 @@ func NewTodo(repo *Repo) *Todo {
 	}
 }
 
-func RouterTodo(repo *Repo) http.Handler {
+func RouterTodo(router fiber.Router, repo *Repo) {
 	todo := NewTodo(repo)
-	router := chi.NewRouter()
 	router.Get("/", todo.list)
-	router.Get("/{todoId}", todo.get)
+	router.Get("/:todoId", todo.get)
 	router.Post("/", todo.create)
-	router.Delete("/{todoId}", todo.delete)
-	router.Patch("/{todoId}", todo.update)
-
-	return router
+	router.Delete("/:todoId", todo.delete)
+	router.Patch("/:todoId", todo.update)
 }
 
-func (t *Todo) list(rw http.ResponseWriter, r *http.Request) {
-	activityGroupId := r.URL.Query().Get("activity_group_id")
+func (t *Todo) list(c *fiber.Ctx) error {
+	activityGroupId := c.Query("activity_group_id")
 	data, _ := t.repo.GetTodos(activityGroupId)
 	print := &PrintTodoItems{
 		Status:  "Success",
@@ -40,14 +35,11 @@ func (t *Todo) list(rw http.ResponseWriter, r *http.Request) {
 		Data:    data,
 	}
 
-	resp, _ := json.Marshal(print)
-
-	rw.WriteHeader(200)
-	rw.Write([]byte(resp))
+	return c.JSON(print)
 }
 
-func (t *Todo) get(rw http.ResponseWriter, r *http.Request) {
-	todoId := chi.URLParam(r, "todoId")
+func (t *Todo) get(c *fiber.Ctx) error {
+	todoId := c.Params("todoId")
 	print := &PrintTodoItem{}
 
 	data, err := t.repo.GetTodo(todoId)
@@ -55,39 +47,31 @@ func (t *Todo) get(rw http.ResponseWriter, r *http.Request) {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Todo with ID %s Not Found", todoId)
 		print.Data = map[string]interface{}{}
-		rw.WriteHeader(404)
+		c.Response().SetStatusCode(404)
 
-		resp, _ := json.Marshal(print)
-		rw.Write([]byte(resp))
-		return
+		return c.JSON(print)
 	}
 
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = data
-	rw.WriteHeader(200)
-	resp, _ := json.Marshal(print)
-	rw.Write([]byte(resp))
+
+	return c.JSON(print)
 }
 
-func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
-	data := &TodoItem{}
+func (t *Todo) create(c *fiber.Ctx) error {
+	data := new(TodoItem)
 	print := &PrintTodoItem{}
 
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		log.Println(err)
-	}
+	c.BodyParser(&data)
 
 	if err := data.Validate(); err != nil {
 		print.Status = "Bad Request"
 		print.Message = err.Error()
 		print.Data = map[string]interface{}{}
-		rw.WriteHeader(400)
-		resp, _ := json.Marshal(print)
+		c.Response().SetStatusCode(400)
 
-		rw.Write([]byte(resp))
-		return
+		return c.JSON(print)
 	}
 
 	insertedId, _ := t.repo.InsertTodo(data)
@@ -96,41 +80,37 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = dataInsert
-	rw.WriteHeader(201)
-	resp, _ := json.Marshal(print)
 
-	rw.Write([]byte(resp))
+	c.Response().SetStatusCode(201)
+
+	return c.JSON(print)
 }
 
-func (t *Todo) delete(rw http.ResponseWriter, r *http.Request) {
-	todoId := chi.URLParam(r, "todoId")
+func (t *Todo) delete(c *fiber.Ctx) error {
+	todoId := c.Params("todoId")
 	print := &PrintTodoItem{}
 
 	deleted, _ := t.repo.DeleteTodo(todoId)
 	if !deleted {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Todo with ID %s Not Found", todoId)
-		rw.WriteHeader(404)
+		c.Response().SetStatusCode(404)
 	} else {
 		print.Status = "Success"
 		print.Message = "Success"
-		rw.WriteHeader(200)
 	}
 
 	print.Data = map[string]interface{}{}
-	resp, _ := json.Marshal(print)
-	rw.Write([]byte(resp))
+
+	return c.JSON(print)
 }
 
-func (t *Todo) update(rw http.ResponseWriter, r *http.Request) {
-	todoId := chi.URLParam(r, "todoId")
+func (t *Todo) update(c *fiber.Ctx) error {
+	todoId := c.Params("todoId")
 	print := &PrintTodoItem{}
 	data := make(map[string]interface{})
 
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		log.Println(err)
-	}
+	c.BodyParser(&data)
 
 	updatedData, err := t.repo.UpdateTodo(todoId, data)
 	if err != nil {
@@ -138,17 +118,14 @@ func (t *Todo) update(rw http.ResponseWriter, r *http.Request) {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Todo with ID %s Not Found", todoId)
 		print.Data = map[string]interface{}{}
-		rw.WriteHeader(404)
-		resp, _ := json.Marshal(print)
+		c.Response().SetStatusCode(404)
 
-		rw.Write([]byte(resp))
-		return
+		return c.JSON(print)
 	}
 
 	print.Status = "Success"
 	print.Message = "Success"
-	rw.WriteHeader(200)
 	print.Data = updatedData
-	resp, _ := json.Marshal(print)
-	rw.Write([]byte(resp))
+
+	return c.JSON(print)
 }

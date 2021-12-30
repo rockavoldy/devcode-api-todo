@@ -2,19 +2,10 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/gofiber/fiber/v2"
 )
-
-func ReturnJson(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "Application/json")
-
-		next.ServeHTTP(rw, r)
-	})
-}
 
 func main() {
 	mysql_host := os.Getenv("MYSQL_HOST")
@@ -38,18 +29,21 @@ func main() {
 	repo := NewRepo(db)
 	defer repo.DB.Close()
 
-	router := chi.NewRouter()
-	router.Use(ReturnJson)
+	app := fiber.New()
 
-	router.Get("/", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Write([]byte("Hello, World!\nDevcode Challenge #2"))
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.SendString("Hello, World!\nDevcode challenge #2 with gofiber")
 	})
 
-	router.Mount("/activity-groups", RouterActivity(repo))
-	router.Mount("/todo-items", RouterTodo(repo))
+	activity := app.Group("/activity-groups")
+	RouterActivity(activity, repo)
+
+	todo := app.Group("/todo-items")
+	RouterTodo(todo, repo)
 
 	log.Println("Listening on port :3030")
-	if err := http.ListenAndServe(":3030", router); err != nil {
+
+	if err := app.Listen(":3030"); err != nil {
 		log.Fatalln(err)
 	}
 }
