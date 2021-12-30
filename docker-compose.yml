@@ -6,7 +6,7 @@ services:
       MYSQL_HOST: db
       MYSQL_USER: root
       MYSQL_PASSWORD: example
-      MYSQL_DBNAME: akhmad_maulana_akbar
+      MYSQL_DBNAME: teestdb
     build: .
     ports:
       - 8090:3030
@@ -15,13 +15,13 @@ services:
     networks:
       - devcode
   db:
-    image: mysql:8.0
+    image: mysql:5.7
     restart: always
     environment:
     - MYSQL_ROOT_PASSWORD=example
-    - MYSQL_DATABASE=akhmad_maulana_akbar
-    - MYSQL_USER=root
-    - MYSQL_PASSWORD=secret
+    - MYSQL_DATABASE=teestdb
+    - MYSQL_USER=akhmad
+    - MYSQL_PASSWORD=example
     expose:
       - 3306
     ports:
