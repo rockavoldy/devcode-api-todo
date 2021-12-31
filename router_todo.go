@@ -1,22 +1,24 @@
 package main
 
 import (
+	"devcode-api-todo/model"
+	"devcode-api-todo/repo"
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type Todo struct {
-	repo *Repo
+	repo *repo.Repo
 }
 
-func NewTodo(repo *Repo) *Todo {
+func NewTodo(repo *repo.Repo) *Todo {
 	return &Todo{
 		repo: repo,
 	}
 }
 
-func RouterTodo(router fiber.Router, repo *Repo) {
+func RouterTodo(router fiber.Router, repo *repo.Repo) {
 	todo := NewTodo(repo)
 	router.Get("/", todo.list)
 	router.Get("/:todoId", todo.get)
@@ -28,7 +30,7 @@ func RouterTodo(router fiber.Router, repo *Repo) {
 func (t *Todo) list(c *fiber.Ctx) error {
 	activityGroupId := c.Query("activity_group_id")
 	data, _ := t.repo.GetTodos(activityGroupId)
-	print := &PrintTodoItems{
+	print := &model.PrintTodoItems{
 		Status:  "Success",
 		Message: "Success",
 		Data:    data,
@@ -39,9 +41,10 @@ func (t *Todo) list(c *fiber.Ctx) error {
 
 func (t *Todo) get(c *fiber.Ctx) error {
 	todoId, _ := c.ParamsInt("todoId")
-	print := &PrintTodoItem{}
+	print := &model.PrintTodoItem{}
 
-	if !t.repo.inmemTo[todoId] {
+	data, err := t.repo.GetTodo(todoId)
+	if err != nil {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
 		print.Data = map[string]interface{}{}
@@ -50,7 +53,6 @@ func (t *Todo) get(c *fiber.Ctx) error {
 		return c.JSON(print)
 	}
 
-	data, _ := t.repo.GetTodo(todoId)
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = data
@@ -59,23 +61,30 @@ func (t *Todo) get(c *fiber.Ctx) error {
 }
 
 func (t *Todo) create(c *fiber.Ctx) error {
-	data := new(TodoItem)
-	print := &PrintTodoItem{}
+	data := make(map[string]interface{})
+	print := &model.PrintTodoItem{}
 
 	c.BodyParser(&data)
 
-	if err := data.Validate(); err != nil {
+	if _, ok := data["activity_group_id"]; !ok {
 		print.Status = "Bad Request"
-		print.Message = err.Error()
+		print.Message = model.ErrActivityGroupIdNull.Error()
 		print.Data = map[string]interface{}{}
 		c.Response().SetStatusCode(400)
 
 		return c.JSON(print)
 	}
 
-	insertedId, _ := t.repo.InsertTodo(data)
-	t.repo.AddTo(int(insertedId))
-	dataInsert, _ := t.repo.GetTodo(insertedId)
+	if _, ok := data["title"]; !ok {
+		print.Status = "Bad Request"
+		print.Message = model.ErrTitleNull.Error()
+		print.Data = map[string]interface{}{}
+		c.Response().SetStatusCode(400)
+
+		return c.JSON(print)
+	}
+
+	dataInsert, _ := t.repo.InsertTodo(data)
 
 	print.Status = "Success"
 	print.Message = "Success"
@@ -88,17 +97,16 @@ func (t *Todo) create(c *fiber.Ctx) error {
 
 func (t *Todo) delete(c *fiber.Ctx) error {
 	todoId, _ := c.ParamsInt("todoId")
-	print := &PrintTodoItem{}
+	print := &model.PrintTodoItem{}
+	deleted, _ := t.repo.DeleteTodo(todoId)
 
-	if !t.repo.inmemTo[todoId] {
+	if !deleted {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
 		c.Response().SetStatusCode(404)
 		return c.JSON(print)
 	}
 
-	t.repo.DeleteTodo(todoId)
-	t.repo.RemoveTo(todoId)
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = map[string]interface{}{}
@@ -108,12 +116,13 @@ func (t *Todo) delete(c *fiber.Ctx) error {
 
 func (t *Todo) update(c *fiber.Ctx) error {
 	todoId, _ := c.ParamsInt("todoId")
-	print := &PrintTodoItem{}
+	print := &model.PrintTodoItem{}
 	data := make(map[string]interface{})
 
 	c.BodyParser(&data)
+	updatedData, err := t.repo.UpdateTodo(todoId, data)
 
-	if !t.repo.inmemTo[todoId] {
+	if err == model.ErrRecordNotFound {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
 		print.Data = map[string]interface{}{}
@@ -122,7 +131,6 @@ func (t *Todo) update(c *fiber.Ctx) error {
 		return c.JSON(print)
 	}
 
-	updatedData, _ := t.repo.UpdateTodo(todoId, data)
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = updatedData

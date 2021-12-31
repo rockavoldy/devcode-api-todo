@@ -1,6 +1,7 @@
 package main
 
 import (
+	"devcode-api-todo/repo"
 	"log"
 	"os"
 
@@ -25,11 +26,14 @@ func main() {
 		mysql_dbname = "teestdb"
 	}
 
-	db := ConnectDB(mysql_host, mysql_user, mysql_password, mysql_dbname)
-	repo := NewRepo(db)
+	db := repo.ConnectDB(mysql_host, mysql_user, mysql_password, mysql_dbname)
+	repo := repo.NewRepo(db)
 	defer repo.DB.Close()
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		DisableStartupMessage: true,
+		Prefork:               true,
+	})
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!\nDevcode challenge #2 with gofiber")

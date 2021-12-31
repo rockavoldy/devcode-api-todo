@@ -1,22 +1,24 @@
 package main
 
 import (
+	"devcode-api-todo/model"
+	"devcode-api-todo/repo"
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type Activity struct {
-	repo *Repo
+	repo *repo.Repo
 }
 
-func NewActivity(repo *Repo) *Activity {
+func NewActivity(repo *repo.Repo) *Activity {
 	return &Activity{
 		repo: repo,
 	}
 }
 
-func RouterActivity(router fiber.Router, repo *Repo) {
+func RouterActivity(router fiber.Router, repo *repo.Repo) {
 	activity := NewActivity(repo)
 
 	router.Get("/", activity.list)
@@ -28,7 +30,7 @@ func RouterActivity(router fiber.Router, repo *Repo) {
 
 func (a *Activity) list(c *fiber.Ctx) error {
 	data, _ := a.repo.GetActivities()
-	print := &PrintActivityGroups{
+	print := &model.PrintActivityGroups{
 		Status:  "Success",
 		Message: "Success",
 		Data:    data,
@@ -39,9 +41,11 @@ func (a *Activity) list(c *fiber.Ctx) error {
 
 func (a *Activity) get(c *fiber.Ctx) error {
 	activityId, _ := c.ParamsInt("activityId")
-	print := &PrintActivtyGroup{}
+	print := &model.PrintActivtyGroup{}
 
-	if !a.repo.inmemAct[activityId] {
+	data, err := a.repo.GetActivity(activityId)
+
+	if err != nil {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
 		print.Data = map[string]interface{}{}
@@ -49,8 +53,6 @@ func (a *Activity) get(c *fiber.Ctx) error {
 
 		return c.JSON(print)
 	}
-
-	data, _ := a.repo.GetActivity(activityId)
 
 	print.Status = "Success"
 	print.Message = "Success"
@@ -60,23 +62,21 @@ func (a *Activity) get(c *fiber.Ctx) error {
 }
 
 func (a *Activity) create(c *fiber.Ctx) error {
-	data := new(ActivityGroup)
-	print := &PrintActivtyGroup{}
+	data := make(map[string]string)
+	print := &model.PrintActivtyGroup{}
 
 	c.BodyParser(&data)
 
-	if err := data.Validate(); err != nil {
+	if _, ok := data["title"]; !ok {
 		print.Status = "Bad Request"
-		print.Message = err.Error()
+		print.Message = model.ErrTitleNull.Error()
 		print.Data = map[string]interface{}{}
 		c.Response().SetStatusCode(400)
 
 		return c.JSON(print)
 	}
 
-	insertedId, _ := a.repo.InsertActivity(data)
-	a.repo.AddAct(int(insertedId))
-	dataInsert, _ := a.repo.GetActivity(insertedId)
+	dataInsert, _ := a.repo.InsertActivity(data)
 
 	print.Status = "Success"
 	print.Message = "Success"
@@ -88,17 +88,17 @@ func (a *Activity) create(c *fiber.Ctx) error {
 
 func (a *Activity) delete(c *fiber.Ctx) error {
 	activityId, _ := c.ParamsInt("activityId")
-	print := &PrintActivtyGroup{}
+	print := &model.PrintActivtyGroup{}
 
-	if !a.repo.inmemAct[activityId] {
+	deleted, _ := a.repo.DeleteActivity(activityId)
+
+	if !deleted {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
 		c.Response().SetStatusCode(404)
 		return c.JSON(print)
 	}
 
-	a.repo.DeleteActivity(activityId)
-	a.repo.RemoveAct(activityId)
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = map[string]interface{}{}
@@ -108,12 +108,14 @@ func (a *Activity) delete(c *fiber.Ctx) error {
 
 func (a *Activity) update(c *fiber.Ctx) error {
 	activityId, _ := c.ParamsInt("activityId")
-	print := &PrintActivtyGroup{}
+	print := &model.PrintActivtyGroup{}
 	data := make(map[string]interface{})
 
 	c.BodyParser(&data)
 
-	if !a.repo.inmemAct[activityId] {
+	updatedData, err := a.repo.UpdateActivity(activityId, data)
+
+	if err == model.ErrRecordNotFound {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
 		print.Data = map[string]interface{}{}
@@ -122,7 +124,6 @@ func (a *Activity) update(c *fiber.Ctx) error {
 		return c.JSON(print)
 	}
 
-	updatedData, _ := a.repo.UpdateActivity(activityId, data)
 	print.Status = "Success"
 	print.Message = "Success"
 	print.Data = updatedData

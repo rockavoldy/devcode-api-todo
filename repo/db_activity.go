@@ -1,43 +1,46 @@
-package main
+package repo
 
 import (
 	"context"
 	"database/sql"
+	"devcode-api-todo/model"
 
 	sq "github.com/Masterminds/squirrel"
 )
 
 // Insert to activities
-func (r *Repo) InsertActivity(activity *ActivityGroup) (int64, error) {
-	sqlQuery, args, _ := sq.Insert("activities").Columns("email", "title").Values(activity.Email, activity.Title).ToSql()
+func (r *Repo) InsertActivity(activity map[string]string) (map[string]interface{}, error) {
+	sqlQuery, args, _ := sq.Insert("activities").Columns("email", "title").Values(activity["email"], activity["title"]).ToSql()
 
-	conn, err := r.DB.Conn(context.Background())
+	prep, err := r.DB.Prepare(sqlQuery)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	defer conn.Close()
+	defer prep.Close()
 
-	res, err := conn.ExecContext(context.Background(), sqlQuery, args...)
+	res, err := prep.ExecContext(context.Background(), args...)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return res.LastInsertId()
+	lastInsertId, _ := res.LastInsertId()
+
+	return r.GetActivity(lastInsertId)
 }
 
 // Get activity
 func (r *Repo) GetActivity(id interface{}) (map[string]interface{}, error) {
-	sqlQuery, args, _ := sq.Select("*").From("activities").Where(sq.Eq{"id": id}).ToSql()
+	sqlQuery, args, _ := sq.Select("*").From("activities").Where(sq.Eq{"id": id}).Limit(1).ToSql()
 
-	conn, err := r.DB.Conn(context.Background())
+	prep, err := r.DB.Prepare(sqlQuery)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer prep.Close()
 
-	row := conn.QueryRowContext(context.Background(), sqlQuery, args...)
+	row := prep.QueryRowContext(context.Background(), args...)
 
-	var activity ActivityGroup
+	activity := &model.ActivityGroup{}
 	err = row.Scan(&activity.ID, &activity.Email, &activity.Title, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
 
 	if err == sql.ErrNoRows {
@@ -51,25 +54,15 @@ func (r *Repo) GetActivity(id interface{}) (map[string]interface{}, error) {
 func (r *Repo) GetActivities() ([]map[string]interface{}, error) {
 	sqlQuery, _, _ := sq.Select("*").From("activities").ToSql()
 
-	conn, err := r.DB.Conn(context.Background())
+	rows, err := r.DB.QueryContext(context.Background(), sqlQuery)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
-
-	prep, err := conn.PrepareContext(context.Background(), sqlQuery)
-	if err != nil {
-		return nil, err
-	}
-
-	rows, err := prep.Query()
-	if err != nil {
-		return nil, err
-	}
+	defer rows.Close()
 
 	activities := make([]map[string]interface{}, 0)
 	for rows.Next() {
-		var activity ActivityGroup
+		activity := &model.ActivityGroup{}
 		rows.Scan(&activity.ID, &activity.Email, &activity.Title, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
 
 		activityMap := activity.MapToInterface()
@@ -84,18 +77,18 @@ func (r *Repo) GetActivities() ([]map[string]interface{}, error) {
 func (r *Repo) UpdateActivity(id interface{}, columns map[string]interface{}) (map[string]interface{}, error) {
 	_, err := r.GetActivity(id)
 	if err == sql.ErrNoRows {
-		return nil, ErrRecordNotFound
+		return nil, model.ErrRecordNotFound
 	}
 
 	sqlQuery, args, _ := sq.Update("activities").Where(sq.Eq{"id": id}).SetMap(columns).ToSql()
 
-	conn, err := r.DB.Conn(context.Background())
+	prep, err := r.DB.Prepare(sqlQuery)
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer prep.Close()
 
-	res, err := conn.ExecContext(context.Background(), sqlQuery, args...)
+	res, err := prep.ExecContext(context.Background(), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -105,20 +98,20 @@ func (r *Repo) UpdateActivity(id interface{}, columns map[string]interface{}) (m
 		return r.GetActivity(id)
 	}
 
-	return nil, ErrRecordNotFound
+	return nil, model.ErrRecordNotFound
 }
 
 // Delete activity
 func (r *Repo) DeleteActivity(id interface{}) (bool, error) {
 	sqlQuery, args, _ := sq.Delete("activities").Where(sq.Eq{"id": id}).ToSql()
 
-	conn, err := r.DB.Conn(context.Background())
+	prep, err := r.DB.Prepare(sqlQuery)
 	if err != nil {
 		return false, err
 	}
-	defer conn.Close()
+	defer prep.Close()
 
-	res, err := conn.ExecContext(context.Background(), sqlQuery, args...)
+	res, err := prep.ExecContext(context.Background(), args...)
 	if err != nil {
 		return false, err
 	}

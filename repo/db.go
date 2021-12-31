@@ -1,6 +1,7 @@
-package main
+package repo
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -27,65 +28,35 @@ func ConnectDB(host, user, pass, dbname string) *sql.DB {
 
 	queryTableActivities := `CREATE TABLE IF NOT EXISTS activities(
 		id INT AUTO_INCREMENT PRIMARY KEY, 
-		email VARCHAR(255) NOT NULL, 
+		email VARCHAR(255), 
 		title VARCHAR(255) NOT NULL, 
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
-		deleted_at DATETIME);`
+		deleted_at DATETIME) ENGINE=InnoDB;`
 
 	queryTableTodos := `CREATE TABLE IF NOT EXISTS todos(
 		id INT AUTO_INCREMENT PRIMARY KEY, 
 		activity_group_id INT NOT NULL, 
 		title VARCHAR(255) NOT NULL, 
-		is_active BOOLEAN NOT NULL DEFAULT TRUE, 
-		priority ENUM('very-high', 'high', 'normal', 'low', 'very-low') NOT NULL DEFAULT 'very-high', 
+		is_active BOOLEAN DEFAULT TRUE, 
+		priority ENUM('very-high', 'high', 'normal', 'low', 'very-low') DEFAULT 'very-high', 
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
 		deleted_at DATETIME, 
-		FOREIGN KEY(activity_group_id) REFERENCES activities(id));`
+		FOREIGN KEY(activity_group_id) REFERENCES activities(id)) ENGINE=InnoDB;`
 
-	db.Exec(queryTableActivities)
-	db.Exec(queryTableTodos)
+	db.ExecContext(context.Background(), queryTableActivities)
+	db.ExecContext(context.Background(), queryTableTodos)
 
 	return db
 }
 
 type Repo struct {
-	DB       *sql.DB
-	inmemAct map[int]bool
-	inmemTo  map[int]bool
+	DB *sql.DB
 }
 
 func NewRepo(db *sql.DB) *Repo {
 	return &Repo{
-		DB:       db,
-		inmemAct: make(map[int]bool),
-		inmemTo:  make(map[int]bool),
+		DB: db,
 	}
-}
-
-func (r *Repo) GetAct(index int) bool {
-	_, ok := r.inmemAct[index]
-	return ok
-}
-
-func (r *Repo) AddAct(index int) {
-	r.inmemAct[index] = true
-}
-
-func (r *Repo) RemoveAct(index int) {
-	delete(r.inmemAct, index)
-}
-
-func (r *Repo) GetTo(index int) bool {
-	_, ok := r.inmemTo[index]
-	return ok
-}
-
-func (r *Repo) AddTo(index int) {
-	r.inmemTo[index] = true
-}
-
-func (r *Repo) RemoveTo(index int) {
-	delete(r.inmemTo, index)
 }
