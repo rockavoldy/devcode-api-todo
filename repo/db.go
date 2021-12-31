@@ -32,7 +32,7 @@ func ConnectDB(host, user, pass, dbname string) *sql.DB {
 		title VARCHAR(255) NOT NULL, 
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
-		deleted_at DATETIME);`
+		deleted_at DATETIME) ENGINE=InnoDB;`
 
 	queryTableTodos := `CREATE TABLE IF NOT EXISTS todos(
 		id INT AUTO_INCREMENT PRIMARY KEY, 
@@ -43,7 +43,7 @@ func ConnectDB(host, user, pass, dbname string) *sql.DB {
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
 		deleted_at DATETIME, 
-		FOREIGN KEY(activity_group_id) REFERENCES activities(id));`
+		FOREIGN KEY(activity_group_id) REFERENCES activities(id)) ENGINE=InnoDB;`
 
 	db.ExecContext(context.Background(), queryTableActivities)
 	db.ExecContext(context.Background(), queryTableTodos)

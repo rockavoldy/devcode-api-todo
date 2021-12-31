@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,8 +13,31 @@ import (
 	"devcode-api-todo/repo"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"golang.org/x/sys/unix"
 )
+
+var lc = net.ListenConfig{
+	Control: func(network, address string, c syscall.RawConn) error {
+		var opErr error
+		if err := c.Control(func(fd uintptr) {
+			opErr = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
+		}); err != nil {
+			return err
+		}
+		return opErr
+	},
+}
+
+func Logger() func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			log.Println("from: ", os.Getpid())
+			next.ServeHTTP(w, r)
+		}
+
+		return http.HandlerFunc(fn)
+	}
+}
 
 func main() {
 	mysql_host := os.Getenv("MYSQL_HOST")
@@ -37,13 +61,17 @@ func main() {
 	InitRepo := repo.NewRepo(db)
 
 	router := chi.NewRouter()
-
-	router.Use(middleware.Compress(5, "gzip"))
+	router.Use(Logger())
 
 	router.Mount("/activity-groups", RouterActivity(InitRepo))
 	router.Mount("/todo-items", RouterTodo(InitRepo))
 
-	server := &http.Server{Addr: ":3030", Handler: router}
+	l, err := lc.Listen(context.Background(), "tcp", ":3030")
+	if err != nil {
+		panic(err)
+	}
+
+	server := &http.Server{Handler: router}
 	serverCtx, serverStopCtx := context.WithCancel(context.Background())
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -70,7 +98,7 @@ func main() {
 	}()
 
 	log.Println("Listening on port :3030")
-	err := server.ListenAndServe()
+	err = server.Serve(l)
 	if err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
