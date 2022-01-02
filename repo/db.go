@@ -1,17 +1,42 @@
 package repo
 
 import (
-	"context"
-	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
+	"github.com/jmoiron/sqlx/reflectx"
 )
 
-func ConnectDB(host, user, pass, dbname string) *sql.DB {
+var createTableActivities = `
+	CREATE TABLE IF NOT EXISTS activities (
+		id INT AUTO_INCREMENT PRIMARY KEY, 
+		email VARCHAR(192), 
+		title VARCHAR(192) NOT NULL, 
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
+		deleted_at DATETIME
+	) ENGINE=InnoDB;`
+
+var createTableTodos = `
+	CREATE TABLE IF NOT EXISTS todos (
+		id INT AUTO_INCREMENT PRIMARY KEY, 
+		activity_group_id INT NOT NULL, 
+		title VARCHAR(192) NOT NULL, 
+		is_active BOOLEAN DEFAULT TRUE, 
+		priority ENUM('very-high', 'high', 'normal', 'low', 'very-low') DEFAULT 'very-high', 
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
+		deleted_at DATETIME, 
+		FOREIGN KEY(activity_group_id) REFERENCES activities(id)
+	) ENGINE=InnoDB;
+`
+
+func ConnectDB(host, user, pass, dbname string) *sqlx.DB {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8&parseTime=true&loc=Local", user, pass, host, dbname)
-	db, err := sql.Open("mysql", dsn)
+	db, err := sqlx.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -23,39 +48,22 @@ func ConnectDB(host, user, pass, dbname string) *sql.DB {
 	}
 
 	log.Println("Successfully connected to db server")
-	db.SetMaxIdleConns(10)
-	db.SetMaxOpenConns(1000)
+	db.MustExec(`DROP TABLE IF EXISTS todos`)
+	db.MustExec(`DROP TABLE IF EXISTS activities`)
 
-	queryTableActivities := `CREATE TABLE IF NOT EXISTS activities(
-		id INT AUTO_INCREMENT PRIMARY KEY, 
-		email VARCHAR(255), 
-		title VARCHAR(255) NOT NULL, 
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
-		deleted_at DATETIME) ENGINE=InnoDB;`
+	db.MustExec(createTableActivities)
+	db.MustExec(createTableTodos)
 
-	queryTableTodos := `CREATE TABLE IF NOT EXISTS todos(
-		id INT AUTO_INCREMENT PRIMARY KEY, 
-		activity_group_id INT NOT NULL, 
-		title VARCHAR(255) NOT NULL, 
-		is_active BOOLEAN DEFAULT TRUE, 
-		priority ENUM('very-high', 'high', 'normal', 'low', 'very-low') DEFAULT 'very-high', 
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
-		deleted_at DATETIME, 
-		FOREIGN KEY(activity_group_id) REFERENCES activities(id)) ENGINE=InnoDB;`
-
-	db.ExecContext(context.Background(), queryTableActivities)
-	db.ExecContext(context.Background(), queryTableTodos)
+	db.Mapper = reflectx.NewMapperFunc("json", strings.ToLower)
 
 	return db
 }
 
 type Repo struct {
-	DB *sql.DB
+	DB *sqlx.DB
 }
 
-func NewRepo(db *sql.DB) *Repo {
+func NewRepo(db *sqlx.DB) *Repo {
 	return &Repo{
 		DB: db,
 	}

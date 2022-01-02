@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"context"
 	"database/sql"
 	"devcode-api-todo/model"
 
@@ -10,15 +9,7 @@ import (
 
 // Insert todo
 func (r *Repo) InsertTodo(todo map[string]interface{}) (map[string]interface{}, error) {
-	sqlQuery, args, _ := sq.Insert("todos").Columns("activity_group_id", "title").Values(todo["activity_group_id"], todo["title"]).ToSql()
-
-	prep, err := r.DB.Prepare(sqlQuery)
-	if err != nil {
-		return nil, err
-	}
-	defer prep.Close()
-
-	res, err := prep.ExecContext(context.Background(), args...)
+	res, err := r.DB.Exec(`INSERT INTO todos (activity_group_id, title) VALUES (?, ?)`, todo["activity_group_id"], todo["title"])
 	if err != nil {
 		return nil, err
 	}
@@ -30,19 +21,10 @@ func (r *Repo) InsertTodo(todo map[string]interface{}) (map[string]interface{}, 
 
 // Get todo
 func (r *Repo) GetTodo(id interface{}) (map[string]interface{}, error) {
-	sqlQuery, args, _ := sq.Select("*").From("todos").Where(sq.Eq{"id": id}).Limit(1).ToSql()
-
-	prep, err := r.DB.Prepare(sqlQuery)
-	if err != nil {
-		return nil, err
-	}
-	defer prep.Close()
-
-	row := prep.QueryRowContext(context.Background(), args...)
+	row := r.DB.QueryRowx(`SELECT * FROM todos WHERE id=?`, id)
 
 	todoItem := &model.TodoItem{}
-	err = row.Scan(&todoItem.ID, &todoItem.ActivityGroupId, &todoItem.Title, &todoItem.IsActive, &todoItem.Priority, &todoItem.CreatedAt, &todoItem.UpdatedAt, &todoItem.DeletedAt)
-
+	err := row.StructScan(todoItem)
 	if err == sql.ErrNoRows {
 		return nil, err
 	}
@@ -52,28 +34,17 @@ func (r *Repo) GetTodo(id interface{}) (map[string]interface{}, error) {
 
 // Get todos
 func (r *Repo) GetTodos(query string) ([]map[string]interface{}, error) {
-	sqlQuery, args, _ := sq.Select("*").From("todos").Where(sq.Eq{"activity_group_id": query}).ToSql()
-
-	prep, err := r.DB.Prepare(sqlQuery)
+	rows, err := r.DB.Queryx(`SELECT * FROM todos WHERE activity_group_id=?`, query)
 	if err != nil {
 		return nil, err
 	}
-	defer prep.Close()
-
-	rows, err := prep.QueryContext(context.Background(), args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 
 	todoItems := make([]map[string]interface{}, 0)
 	for rows.Next() {
 		todoItem := &model.TodoItem{}
-		rows.Scan(&todoItem.ID, &todoItem.ActivityGroupId, &todoItem.Title, &todoItem.IsActive, &todoItem.Priority, &todoItem.CreatedAt, &todoItem.UpdatedAt, &todoItem.DeletedAt)
+		rows.StructScan(todoItem)
 
-		todoItemMap := todoItem.MapToInterface()
-
-		todoItems = append(todoItems, todoItemMap)
+		todoItems = append(todoItems, todoItem.MapToInterface())
 	}
 
 	return todoItems, nil
@@ -88,13 +59,7 @@ func (r *Repo) UpdateTodo(id interface{}, columns map[string]interface{}) (map[s
 
 	sqlQuery, args, _ := sq.Update("todos").Where(sq.Eq{"id": id}).SetMap(columns).ToSql()
 
-	prep, err := r.DB.Prepare(sqlQuery)
-	if err != nil {
-		return nil, err
-	}
-	defer prep.Close()
-
-	res, err := prep.ExecContext(context.Background(), args...)
+	res, err := r.DB.Exec(sqlQuery, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -111,13 +76,7 @@ func (r *Repo) UpdateTodo(id interface{}, columns map[string]interface{}) (map[s
 func (r *Repo) DeleteTodo(id interface{}) (bool, error) {
 	sqlQuery, args, _ := sq.Delete("todos").Where(sq.Eq{"id": id}).ToSql()
 
-	prep, err := r.DB.Prepare(sqlQuery)
-	if err != nil {
-		return false, err
-	}
-	defer prep.Close()
-
-	res, err := prep.ExecContext(context.Background(), args...)
+	res, err := r.DB.Exec(sqlQuery, args...)
 	if err != nil {
 		return false, err
 	}

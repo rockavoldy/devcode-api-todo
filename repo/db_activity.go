@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"context"
 	"database/sql"
 	"devcode-api-todo/model"
 
@@ -10,15 +9,7 @@ import (
 
 // Insert to activities
 func (r *Repo) InsertActivity(activity map[string]string) (map[string]interface{}, error) {
-	sqlQuery, args, _ := sq.Insert("activities").Columns("email", "title").Values(activity["email"], activity["title"]).ToSql()
-
-	prep, err := r.DB.Prepare(sqlQuery)
-	if err != nil {
-		return nil, err
-	}
-	defer prep.Close()
-
-	res, err := prep.ExecContext(context.Background(), args...)
+	res, err := r.DB.Exec(`INSERT INTO activities (email, title) VALUES (?, ?)`, activity["email"], activity["title"])
 	if err != nil {
 		return nil, err
 	}
@@ -30,18 +21,10 @@ func (r *Repo) InsertActivity(activity map[string]string) (map[string]interface{
 
 // Get activity
 func (r *Repo) GetActivity(id interface{}) (map[string]interface{}, error) {
-	sqlQuery, args, _ := sq.Select("*").From("activities").Where(sq.Eq{"id": id}).Limit(1).ToSql()
-
-	prep, err := r.DB.Prepare(sqlQuery)
-	if err != nil {
-		return nil, err
-	}
-	defer prep.Close()
-
-	row := prep.QueryRowContext(context.Background(), args...)
+	row := r.DB.QueryRowx(`SELECT * FROM activities WHERE id=?`, id)
 
 	activity := &model.ActivityGroup{}
-	err = row.Scan(&activity.ID, &activity.Email, &activity.Title, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
+	err := row.StructScan(activity)
 
 	if err == sql.ErrNoRows {
 		return nil, err
@@ -52,22 +35,17 @@ func (r *Repo) GetActivity(id interface{}) (map[string]interface{}, error) {
 
 // Get activities
 func (r *Repo) GetActivities() ([]map[string]interface{}, error) {
-	sqlQuery, _, _ := sq.Select("*").From("activities").ToSql()
-
-	rows, err := r.DB.QueryContext(context.Background(), sqlQuery)
+	rows, err := r.DB.Queryx(`SELECT * FROM activities`)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	activities := make([]map[string]interface{}, 0)
 	for rows.Next() {
 		activity := &model.ActivityGroup{}
-		rows.Scan(&activity.ID, &activity.Email, &activity.Title, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
+		rows.StructScan(activity)
 
-		activityMap := activity.MapToInterface()
-
-		activities = append(activities, activityMap)
+		activities = append(activities, activity.MapToInterface())
 	}
 
 	return activities, nil
@@ -82,13 +60,7 @@ func (r *Repo) UpdateActivity(id interface{}, columns map[string]interface{}) (m
 
 	sqlQuery, args, _ := sq.Update("activities").Where(sq.Eq{"id": id}).SetMap(columns).ToSql()
 
-	prep, err := r.DB.Prepare(sqlQuery)
-	if err != nil {
-		return nil, err
-	}
-	defer prep.Close()
-
-	res, err := prep.ExecContext(context.Background(), args...)
+	res, err := r.DB.Exec(sqlQuery, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -105,13 +77,7 @@ func (r *Repo) UpdateActivity(id interface{}, columns map[string]interface{}) (m
 func (r *Repo) DeleteActivity(id interface{}) (bool, error) {
 	sqlQuery, args, _ := sq.Delete("activities").Where(sq.Eq{"id": id}).ToSql()
 
-	prep, err := r.DB.Prepare(sqlQuery)
-	if err != nil {
-		return false, err
-	}
-	defer prep.Close()
-
-	res, err := prep.ExecContext(context.Background(), args...)
+	res, err := r.DB.Exec(sqlQuery, args...)
 	if err != nil {
 		return false, err
 	}
