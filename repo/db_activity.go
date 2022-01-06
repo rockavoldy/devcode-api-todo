@@ -3,14 +3,12 @@ package repo
 import (
 	"database/sql"
 	"devcode-api-todo/model"
-	"sync"
 
 	sq "github.com/Masterminds/squirrel"
 )
 
 // Insert to activities
-func (r *Repo) InsertActivity(wg *sync.WaitGroup, activity *model.ActivityGroup) (map[string]interface{}, error) {
-	defer wg.Done()
+func (r *Repo) InsertActivity(activity *model.ActivityGroup) (map[string]interface{}, error) {
 	prep, _ := r.DB.Preparex(`INSERT INTO activities (id, email, title, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
 	res, err := prep.Exec(activity.ID, activity.Email, activity.Title, activity.CreatedAt, activity.UpdatedAt)
 	if err != nil {

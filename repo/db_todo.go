@@ -3,14 +3,12 @@ package repo
 import (
 	"database/sql"
 	"devcode-api-todo/model"
-	"sync"
 
 	sq "github.com/Masterminds/squirrel"
 )
 
 // Insert todo
-func (r *Repo) InsertTodo(wg *sync.WaitGroup, todo *model.TodoItem) (map[string]interface{}, error) {
-	defer wg.Done()
+func (r *Repo) InsertTodo(todo *model.TodoItem) (map[string]interface{}, error) {
 	prep, _ := r.DB.Preparex(`INSERT INTO todos (id, activity_group_id, title, is_active, priority, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
 
 	res, err := prep.Exec(

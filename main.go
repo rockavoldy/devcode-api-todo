@@ -9,6 +9,37 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+type WorkerPool interface {
+	Run()
+	AddTask(task func())
+}
+
+type workerPool struct {
+	maxWorker  int
+	queuedTask chan func()
+}
+
+func (wp *workerPool) Run() {
+	for i := 0; i < wp.maxWorker; i++ {
+		go func(workerID int) {
+			for task := range wp.queuedTask {
+				task()
+			}
+		}(i + 1)
+	}
+}
+
+func (wp *workerPool) AddTask(task func()) {
+	wp.queuedTask <- task
+}
+
+func NewWorkerPool(maxWorker int) *workerPool {
+	return &workerPool{
+		maxWorker:  maxWorker,
+		queuedTask: make(chan func()),
+	}
+}
+
 func main() {
 	mysql_host := os.Getenv("MYSQL_HOST")
 	if mysql_host == "" {
@@ -29,13 +60,15 @@ func main() {
 
 	db := repo.ConnectDB(mysql_host, mysql_user, mysql_password, mysql_dbname)
 	repo := repo.NewRepo(db)
-	var wg sync.WaitGroup
-	var mutex sync.Mutex
 	defer repo.DB.Close()
+
+	var mutex sync.Mutex
+	wp := NewWorkerPool(100)
+	wp.Run()
 
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: true,
-		Prefork:               false,
+		Prefork:               true,
 	})
 
 	app.Get("/", func(c *fiber.Ctx) error {
@@ -43,12 +76,10 @@ func main() {
 	})
 
 	activity := app.Group("/activity-groups")
-	RouterActivity(activity, repo, &wg, &mutex)
+	RouterActivity(activity, repo, wp, &mutex)
 
 	todo := app.Group("/todo-items")
-	RouterTodo(todo, repo, &wg, &mutex)
-
-	wg.Wait()
+	RouterTodo(todo, repo, wp, &mutex)
 
 	log.Println("Listening on port :3030")
 

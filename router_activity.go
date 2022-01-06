@@ -11,20 +11,20 @@ import (
 
 type Activity struct {
 	repo  *repo.Repo
-	wg    *sync.WaitGroup
+	wp    *workerPool
 	mutex *sync.Mutex
 }
 
-func NewActivity(repo *repo.Repo, wg *sync.WaitGroup, mtx *sync.Mutex) *Activity {
+func NewActivity(repo *repo.Repo, wp *workerPool, mtx *sync.Mutex) *Activity {
 	return &Activity{
 		repo:  repo,
-		wg:    wg,
+		wp:    wp,
 		mutex: mtx,
 	}
 }
 
-func RouterActivity(router fiber.Router, repo *repo.Repo, wg *sync.WaitGroup, mtx *sync.Mutex) {
-	activity := NewActivity(repo, wg, mtx)
+func RouterActivity(router fiber.Router, repo *repo.Repo, wp *workerPool, mtx *sync.Mutex) {
+	activity := NewActivity(repo, wp, mtx)
 
 	router.Get("/", activity.list)
 	router.Get("/:activityId", activity.get)
@@ -81,9 +81,10 @@ func (a *Activity) create(c *fiber.Ctx) error {
 		return c.JSON(print)
 	}
 
-	a.wg.Add(1)
 	dataStruct := model.NewActivityGroup(a.mutex, data["email"], data["title"])
-	go a.repo.InsertActivity(a.wg, dataStruct)
+	a.wp.AddTask(func() {
+		a.repo.InsertActivity(dataStruct)
+	})
 
 	print.Status = "Success"
 	print.Message = "Success"

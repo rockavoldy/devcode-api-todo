@@ -11,20 +11,20 @@ import (
 
 type Todo struct {
 	repo  *repo.Repo
-	wg    *sync.WaitGroup
+	wp    *workerPool
 	mutex *sync.Mutex
 }
 
-func NewTodo(repo *repo.Repo, wg *sync.WaitGroup, mtx *sync.Mutex) *Todo {
+func NewTodo(repo *repo.Repo, wp *workerPool, mtx *sync.Mutex) *Todo {
 	return &Todo{
 		repo:  repo,
-		wg:    wg,
+		wp:    wp,
 		mutex: mtx,
 	}
 }
 
-func RouterTodo(router fiber.Router, repo *repo.Repo, wg *sync.WaitGroup, mtx *sync.Mutex) {
-	todo := NewTodo(repo, wg, mtx)
+func RouterTodo(router fiber.Router, repo *repo.Repo, wp *workerPool, mtx *sync.Mutex) {
+	todo := NewTodo(repo, wp, mtx)
 	router.Get("/", todo.list)
 	router.Get("/:todoId", todo.get)
 	router.Post("/", todo.create)
@@ -89,9 +89,10 @@ func (t *Todo) create(c *fiber.Ctx) error {
 		return c.JSON(print)
 	}
 
-	t.wg.Add(1)
 	dataStruct := model.NewTodoItem(t.mutex, data.ActivityGroupId, data.Title, data.IsActive, model.PriorityStringToInt(data.Priority))
-	go t.repo.InsertTodo(t.wg, dataStruct)
+	t.wp.AddTask(func() {
+		t.repo.InsertTodo(dataStruct)
+	})
 
 	print.Status = "Success"
 	print.Message = "Success"
