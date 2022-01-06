@@ -12,25 +12,24 @@ import (
 
 var createTableActivities = `
 	CREATE TABLE IF NOT EXISTS activities (
-		id INT AUTO_INCREMENT PRIMARY KEY, 
+		id INT PRIMARY KEY, 
 		email VARCHAR(192), 
 		title VARCHAR(192) NOT NULL, 
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
+		created_at DATETIME, 
+		updated_at DATETIME, 
 		deleted_at DATETIME
 	) ENGINE=InnoDB;`
 
 var createTableTodos = `
 	CREATE TABLE IF NOT EXISTS todos (
-		id INT AUTO_INCREMENT PRIMARY KEY, 
+		id INT PRIMARY KEY, 
 		activity_group_id INT NOT NULL, 
 		title VARCHAR(192) NOT NULL, 
 		is_active BOOLEAN DEFAULT TRUE, 
 		priority ENUM('very-high', 'high', 'normal', 'low', 'very-low') DEFAULT 'very-high', 
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP, 
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
-		deleted_at DATETIME, 
-		FOREIGN KEY(activity_group_id) REFERENCES activities(id)
+		created_at DATETIME, 
+		updated_at DATETIME, 
+		deleted_at DATETIME
 	) ENGINE=InnoDB;
 `
 

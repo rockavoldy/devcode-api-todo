@@ -4,6 +4,7 @@ import (
 	"devcode-api-todo/repo"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -28,11 +29,13 @@ func main() {
 
 	db := repo.ConnectDB(mysql_host, mysql_user, mysql_password, mysql_dbname)
 	repo := repo.NewRepo(db)
+	var wg sync.WaitGroup
+	var mutex sync.Mutex
 	defer repo.DB.Close()
 
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: true,
-		Prefork:               true,
+		Prefork:               false,
 	})
 
 	app.Get("/", func(c *fiber.Ctx) error {
@@ -40,10 +43,12 @@ func main() {
 	})
 
 	activity := app.Group("/activity-groups")
-	RouterActivity(activity, repo)
+	RouterActivity(activity, repo, &wg, &mutex)
 
 	todo := app.Group("/todo-items")
-	RouterTodo(todo, repo)
+	RouterTodo(todo, repo, &wg, &mutex)
+
+	wg.Wait()
 
 	log.Println("Listening on port :3030")
 

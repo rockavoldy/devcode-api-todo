@@ -4,22 +4,27 @@ import (
 	"devcode-api-todo/model"
 	"devcode-api-todo/repo"
 	"fmt"
+	"sync"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type Todo struct {
-	repo *repo.Repo
+	repo  *repo.Repo
+	wg    *sync.WaitGroup
+	mutex *sync.Mutex
 }
 
-func NewTodo(repo *repo.Repo) *Todo {
+func NewTodo(repo *repo.Repo, wg *sync.WaitGroup, mtx *sync.Mutex) *Todo {
 	return &Todo{
-		repo: repo,
+		repo:  repo,
+		wg:    wg,
+		mutex: mtx,
 	}
 }
 
-func RouterTodo(router fiber.Router, repo *repo.Repo) {
-	todo := NewTodo(repo)
+func RouterTodo(router fiber.Router, repo *repo.Repo, wg *sync.WaitGroup, mtx *sync.Mutex) {
+	todo := NewTodo(repo, wg, mtx)
 	router.Get("/", todo.list)
 	router.Get("/:todoId", todo.get)
 	router.Post("/", todo.create)
@@ -61,12 +66,12 @@ func (t *Todo) get(c *fiber.Ctx) error {
 }
 
 func (t *Todo) create(c *fiber.Ctx) error {
-	data := make(map[string]interface{})
+	var data model.TodoItem
 	print := &model.PrintTodoItem{}
 
 	c.BodyParser(&data)
 
-	if _, ok := data["activity_group_id"]; !ok {
+	if data.ActivityGroupId == 0 {
 		print.Status = "Bad Request"
 		print.Message = model.ErrActivityGroupIdNull.Error()
 		print.Data = map[string]interface{}{}
@@ -75,7 +80,7 @@ func (t *Todo) create(c *fiber.Ctx) error {
 		return c.JSON(print)
 	}
 
-	if _, ok := data["title"]; !ok {
+	if data.Title == "" {
 		print.Status = "Bad Request"
 		print.Message = model.ErrTitleNull.Error()
 		print.Data = map[string]interface{}{}
@@ -84,11 +89,13 @@ func (t *Todo) create(c *fiber.Ctx) error {
 		return c.JSON(print)
 	}
 
-	dataInsert, _ := t.repo.InsertTodo(data)
+	t.wg.Add(1)
+	dataStruct := model.NewTodoItem(t.mutex, data.ActivityGroupId, data.Title, data.IsActive, model.PriorityStringToInt(data.Priority))
+	go t.repo.InsertTodo(t.wg, dataStruct)
 
 	print.Status = "Success"
 	print.Message = "Success"
-	print.Data = dataInsert
+	print.Data = dataStruct.MapToInterface()
 
 	c.Response().SetStatusCode(201)
 

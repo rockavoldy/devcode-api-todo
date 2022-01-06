@@ -4,22 +4,27 @@ import (
 	"devcode-api-todo/model"
 	"devcode-api-todo/repo"
 	"fmt"
+	"sync"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type Activity struct {
-	repo *repo.Repo
+	repo  *repo.Repo
+	wg    *sync.WaitGroup
+	mutex *sync.Mutex
 }
 
-func NewActivity(repo *repo.Repo) *Activity {
+func NewActivity(repo *repo.Repo, wg *sync.WaitGroup, mtx *sync.Mutex) *Activity {
 	return &Activity{
-		repo: repo,
+		repo:  repo,
+		wg:    wg,
+		mutex: mtx,
 	}
 }
 
-func RouterActivity(router fiber.Router, repo *repo.Repo) {
-	activity := NewActivity(repo)
+func RouterActivity(router fiber.Router, repo *repo.Repo, wg *sync.WaitGroup, mtx *sync.Mutex) {
+	activity := NewActivity(repo, wg, mtx)
 
 	router.Get("/", activity.list)
 	router.Get("/:activityId", activity.get)
@@ -76,11 +81,13 @@ func (a *Activity) create(c *fiber.Ctx) error {
 		return c.JSON(print)
 	}
 
-	dataInsert, _ := a.repo.InsertActivity(data)
+	a.wg.Add(1)
+	dataStruct := model.NewActivityGroup(a.mutex, data["email"], data["title"])
+	go a.repo.InsertActivity(a.wg, dataStruct)
 
 	print.Status = "Success"
 	print.Message = "Success"
-	print.Data = dataInsert
+	print.Data = dataStruct.MapToInterface()
 	c.Response().SetStatusCode(201)
 
 	return c.JSON(print)

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -11,6 +12,17 @@ var (
 	ErrActivityGroupIdNull = errors.New("activity_group_id cannot be null")
 	ErrRecordNotFound      = errors.New("record not found")
 )
+
+var ActivityIncr int = 0
+
+func GetActivityId(m *sync.Mutex) int {
+	m.Lock()
+
+	ActivityIncr += 1
+	m.Unlock()
+
+	return ActivityIncr
+}
 
 type ActivityGroup struct {
 	ID        int       `json:"id,omitempty"`
@@ -33,8 +45,9 @@ type PrintActivityGroups struct {
 	Data    []map[string]interface{} `json:"data"`
 }
 
-func NewActivityGroup(email, title string) *ActivityGroup {
+func NewActivityGroup(m *sync.Mutex, email, title string) *ActivityGroup {
 	return &ActivityGroup{
+		ID:        GetActivityId(m),
 		Email:     email,
 		Title:     title,
 		CreatedAt: time.Now(),
@@ -98,6 +111,17 @@ func PriorityStringToInt(priority string) Priority {
 	return priorityInt[priority]
 }
 
+var TodoIncr int = 0
+
+func GetTodoId(m *sync.Mutex) int {
+	m.Lock()
+
+	TodoIncr += 1
+	m.Unlock()
+
+	return TodoIncr
+}
+
 type TodoItem struct {
 	ID              int       `json:"id,omitempty"`
 	ActivityGroupId int       `json:"activity_group_id,omitempty"`
@@ -121,8 +145,12 @@ type PrintTodoItems struct {
 	Data    []map[string]interface{} `json:"data"`
 }
 
-func NewTodoItem(activity_group_id int, title string, isActive bool, priority Priority) *TodoItem {
+func NewTodoItem(m *sync.Mutex, activity_group_id int, title string, isActive bool, priority Priority) *TodoItem {
+	if !isActive {
+		isActive = true
+	}
 	return &TodoItem{
+		ID:              GetTodoId(m),
 		ActivityGroupId: activity_group_id,
 		Title:           title,
 		IsActive:        isActive,
