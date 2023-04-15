@@ -2,16 +2,17 @@ package repo
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
+
+	"github.com/jmoiron/sqlx"
 
 	_ "github.com/go-sql-driver/mysql"
 )
 
-func ConnectDB(host, user, pass, dbname string) *sql.DB {
+func ConnectDB(host, user, pass, dbname string) *sqlx.DB {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8&parseTime=true&loc=Local", user, pass, host, dbname)
-	db, err := sql.Open("mysql", dsn)
+	db, err := sqlx.Connect("mysql", dsn)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -45,17 +46,17 @@ func ConnectDB(host, user, pass, dbname string) *sql.DB {
 		deleted_at DATETIME, 
 		FOREIGN KEY(activity_group_id) REFERENCES activities(id)) ENGINE=InnoDB;`
 
-	db.ExecContext(context.Background(), queryTableActivities)
-	db.ExecContext(context.Background(), queryTableTodos)
+	db.MustExecContext(context.Background(), queryTableActivities)
+	db.MustExecContext(context.Background(), queryTableTodos)
 
 	return db
 }
 
 type Repo struct {
-	DB *sql.DB
+	DB *sqlx.DB
 }
 
-func NewRepo(db *sql.DB) *Repo {
+func NewRepo(db *sqlx.DB) *Repo {
 	return &Repo{
 		DB: db,
 	}

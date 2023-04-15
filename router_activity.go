@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -51,14 +52,15 @@ func (a *Activity) list(rw http.ResponseWriter, r *http.Request) {
 
 func (a *Activity) get(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
-	activityId := chi.URLParam(r, "activityId")
-	print := &model.PrintActivtyGroup{}
+	activityParams := chi.URLParam(r, "activityId")
+	activityId, _ := strconv.ParseInt(activityParams, 10, 64)
+	print := &model.PrintActivityGroup{}
 
 	data, err := a.repo.GetActivity(activityId)
 	if err != nil {
 		print.Status = "Not Found"
-		print.Message = fmt.Sprintf("Activity with ID %s Not Found", activityId)
-		print.Data = map[string]interface{}{}
+		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
+		print.Data = model.ActivityGroup{}
 		rw.WriteHeader(404)
 
 		resp, _ := json.Marshal(print)
@@ -77,7 +79,7 @@ func (a *Activity) get(rw http.ResponseWriter, r *http.Request) {
 func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
 	var data map[string]string
-	print := &model.PrintActivtyGroup{}
+	print := &model.PrintActivityGroup{}
 
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
@@ -87,7 +89,7 @@ func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 	if _, titleOk := data["title"]; !titleOk {
 		print.Status = "Bad Request"
 		print.Message = model.ErrTitleNull.Error()
-		print.Data = map[string]interface{}{}
+		print.Data = model.ActivityGroup{}
 		rw.WriteHeader(400)
 		resp, _ := json.Marshal(print)
 
@@ -96,6 +98,7 @@ func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	dataInsert, _ := a.repo.InsertActivity(data)
+	log.Println(dataInsert)
 
 	print.Status = "Success"
 	print.Message = "Success"
@@ -108,13 +111,14 @@ func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 
 func (a *Activity) delete(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
-	activityId := chi.URLParam(r, "activityId")
-	print := &model.PrintActivtyGroup{}
+	activityParams := chi.URLParam(r, "activityId")
+	activityId, _ := strconv.ParseInt(activityParams, 10, 64)
+	print := &model.PrintActivityGroup{}
 
 	deleted, _ := a.repo.DeleteActivity(activityId)
 	if !deleted {
 		print.Status = "Not Found"
-		print.Message = fmt.Sprintf("Activity with ID %s Not Found", activityId)
+		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
 		rw.WriteHeader(404)
 	} else {
 		print.Status = "Success"
@@ -122,15 +126,16 @@ func (a *Activity) delete(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(200)
 	}
 
-	print.Data = map[string]interface{}{}
+	print.Data = model.ActivityGroup{}
 	resp, _ := json.Marshal(print)
 	rw.Write([]byte(resp))
 }
 
 func (a *Activity) update(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
-	activityId := chi.URLParam(r, "activityId")
-	print := &model.PrintActivtyGroup{}
+	activityParams := chi.URLParam(r, "activityId")
+	activityId, _ := strconv.ParseInt(activityParams, 10, 64)
+	print := &model.PrintActivityGroup{}
 	var data map[string]interface{}
 
 	err := json.NewDecoder(r.Body).Decode(&data)
@@ -141,8 +146,8 @@ func (a *Activity) update(rw http.ResponseWriter, r *http.Request) {
 	updatedData, err := a.repo.UpdateActivity(activityId, data)
 	if err != nil {
 		print.Status = "Not Found"
-		print.Message = fmt.Sprintf("Activity with ID %s Not Found", activityId)
-		print.Data = map[string]interface{}{}
+		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
+		print.Data = model.ActivityGroup{}
 		rw.WriteHeader(404)
 		resp, _ := json.Marshal(print)
 

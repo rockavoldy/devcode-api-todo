@@ -1,4 +1,4 @@
-FROM golang:1.17.5-alpine as build
+FROM --platform=amd64 golang:1.20-alpine3.17 as build
 
 WORKDIR /app
 COPY . ./
@@ -9,7 +9,7 @@ ENV MYSQL_PASSWORD "$MYSQL_PASSWORD"
 ENV MYSQL_DBNAME "$MYSQL_DBNAME"
 RUN go mod tidy && go vet . && go build -ldflags="-s -w" -o devcode .
 
-FROM alpine:3.15.0
+FROM --platform=amd64 alpine:3.17.0
 COPY --from=build /app/devcode /devcode
 EXPOSE 3030
 

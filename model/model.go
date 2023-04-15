@@ -1,6 +1,7 @@
 package model
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/pkg/errors"
@@ -13,24 +14,24 @@ var (
 )
 
 type ActivityGroup struct {
-	ID        int       `json:"id,omitempty"`
-	Email     string    `json:"email,omitempty"`
-	Title     string    `json:"title,omitempty"`
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	DeletedAt time.Time `json:"deleted_at,omitempty"`
+	ID        int          `json:"id,omitempty" db:"id"`
+	Email     string       `json:"email,omitempty" db:"email"`
+	Title     string       `json:"title,omitempty" db:"title"`
+	CreatedAt time.Time    `json:"created_at,omitempty" db:"created_at"`
+	UpdatedAt time.Time    `json:"updated_at,omitempty" db:"updated_at"`
+	DeletedAt sql.NullTime `json:"deleted_at,omitempty" db:"deleted_at"`
 }
 
-type PrintActivtyGroup struct {
-	Status  string                 `json:"status"`
-	Message string                 `json:"message"`
-	Data    map[string]interface{} `json:"data"`
+type PrintActivityGroup struct {
+	Status  string        `json:"status"`
+	Message string        `json:"message"`
+	Data    ActivityGroup `json:"data"`
 }
 
 type PrintActivityGroups struct {
-	Status  string                   `json:"status"`
-	Message string                   `json:"message"`
-	Data    []map[string]interface{} `json:"data"`
+	Status  string          `json:"status"`
+	Message string          `json:"message"`
+	Data    []ActivityGroup `json:"data"`
 }
 
 func NewActivityGroup(email, title string) *ActivityGroup {
@@ -46,13 +47,19 @@ func (a *ActivityGroup) MapToInterface() map[string]interface{} {
 	if a == nil {
 		return map[string]interface{}{}
 	}
+
+	deletedAt, err := a.DeletedAt.Value()
+	if err != nil {
+		deletedAt = nil
+	}
+
 	return map[string]interface{}{
 		"id":         a.ID,
 		"email":      a.Email,
 		"title":      a.Title,
 		"created_at": a.CreatedAt,
 		"updated_at": a.UpdatedAt,
-		"deleted_at": a.DeletedAt,
+		"deleted_at": deletedAt,
 	}
 }
 
@@ -99,26 +106,26 @@ func PriorityStringToInt(priority string) Priority {
 }
 
 type TodoItem struct {
-	ID              int       `json:"id,omitempty"`
-	ActivityGroupId int       `json:"activity_group_id,omitempty"`
-	Title           string    `json:"title,omitempty"`
-	IsActive        bool      `json:"is_active,omitempty"`
-	Priority        string    `json:"priority,omitempty"`
-	CreatedAt       time.Time `json:"created_at,omitempty"`
-	UpdatedAt       time.Time `json:"updated_at,omitempty"`
-	DeletedAt       time.Time `json:"deleted_at,omitempty"`
+	ID              int          `json:"id,omitempty" db:"id"`
+	ActivityGroupId int          `json:"activity_group_id,omitempty" db:"activity_group_id"`
+	Title           string       `json:"title,omitempty" db:"title"`
+	IsActive        bool         `json:"is_active,omitempty" db:"is_active"`
+	Priority        string       `json:"priority,omitempty" db:"priority"`
+	CreatedAt       time.Time    `json:"created_at,omitempty" db:"created_at"`
+	UpdatedAt       time.Time    `json:"updated_at,omitempty" db:"updated_at"`
+	DeletedAt       sql.NullTime `json:"deleted_at,omitempty" db:"deleted_at"`
 }
 
 type PrintTodoItem struct {
-	Status  string                 `json:"status"`
-	Message string                 `json:"message"`
-	Data    map[string]interface{} `json:"data"`
+	Status  string   `json:"status"`
+	Message string   `json:"message"`
+	Data    TodoItem `json:"data"`
 }
 
 type PrintTodoItems struct {
-	Status  string                   `json:"status"`
-	Message string                   `json:"message"`
-	Data    []map[string]interface{} `json:"data"`
+	Status  string     `json:"status"`
+	Message string     `json:"message"`
+	Data    []TodoItem `json:"data"`
 }
 
 func NewTodoItem(activity_group_id int, title string, isActive bool, priority Priority) *TodoItem {
@@ -137,6 +144,11 @@ func (t *TodoItem) MapToInterface() map[string]interface{} {
 		return map[string]interface{}{}
 	}
 
+	deletedAt, err := t.DeletedAt.Value()
+	if err != nil {
+		deletedAt = nil
+	}
+
 	return map[string]interface{}{
 		"id":                t.ID,
 		"activity_group_id": t.ActivityGroupId,
@@ -145,7 +157,7 @@ func (t *TodoItem) MapToInterface() map[string]interface{} {
 		"priority":          t.Priority,
 		"created_at":        t.CreatedAt,
 		"updated_at":        t.UpdatedAt,
-		"deleted_at":        t.DeletedAt,
+		"deleted_at":        deletedAt,
 	}
 }
 

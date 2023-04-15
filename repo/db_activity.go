@@ -1,27 +1,16 @@
 package repo
 
 import (
-	"context"
-	"database/sql"
 	"devcode-api-todo/model"
 
 	sq "github.com/Masterminds/squirrel"
 )
 
 // Insert to activities
-func (r *Repo) InsertActivity(activity map[string]string) (map[string]interface{}, error) {
+func (r *Repo) InsertActivity(activity map[string]string) (model.ActivityGroup, error) {
 	sqlQuery, args, _ := sq.Insert("activities").Columns("email", "title").Values(activity["email"], activity["title"]).ToSql()
 
-	prep, err := r.DB.Prepare(sqlQuery)
-	if err != nil {
-		return nil, err
-	}
-	defer prep.Close()
-
-	res, err := prep.ExecContext(context.Background(), args...)
-	if err != nil {
-		return nil, err
-	}
+	res := r.DB.MustExec(sqlQuery, args...)
 
 	lastInsertId, _ := res.LastInsertId()
 
@@ -29,68 +18,43 @@ func (r *Repo) InsertActivity(activity map[string]string) (map[string]interface{
 }
 
 // Get activity
-func (r *Repo) GetActivity(id interface{}) (map[string]interface{}, error) {
+func (r *Repo) GetActivity(id int64) (model.ActivityGroup, error) {
 	sqlQuery, args, _ := sq.Select("*").From("activities").Where(sq.Eq{"id": id}).ToSql()
 
-	prep, err := r.DB.Prepare(sqlQuery)
+	activity := model.ActivityGroup{}
+	err := r.DB.Get(&activity, sqlQuery, args...)
 	if err != nil {
-		return nil, err
-	}
-	defer prep.Close()
-
-	row := prep.QueryRowContext(context.Background(), args...)
-
-	activity := &model.ActivityGroup{}
-	err = row.Scan(&activity.ID, &activity.Email, &activity.Title, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
-
-	if err == sql.ErrNoRows {
-		return nil, err
+		return model.ActivityGroup{}, err
 	}
 
-	return activity.MapToInterface(), nil
+	return activity, nil
 }
 
 // Get activities
-func (r *Repo) GetActivities() ([]map[string]interface{}, error) {
+func (r *Repo) GetActivities() ([]model.ActivityGroup, error) {
 	sqlQuery, _, _ := sq.Select("*").From("activities").ToSql()
 
-	rows, err := r.DB.QueryContext(context.Background(), sqlQuery)
+	activities := []model.ActivityGroup{}
+	err := r.DB.Select(&activities, sqlQuery)
 	if err != nil {
 		return nil, err
-	}
-	defer rows.Close()
-
-	activities := make([]map[string]interface{}, 0)
-	for rows.Next() {
-		activity := &model.ActivityGroup{}
-		rows.Scan(&activity.ID, &activity.Email, &activity.Title, &activity.CreatedAt, &activity.UpdatedAt, &activity.DeletedAt)
-
-		activityMap := activity.MapToInterface()
-
-		activities = append(activities, activityMap)
 	}
 
 	return activities, nil
 }
 
 // Update activity
-func (r *Repo) UpdateActivity(id interface{}, columns map[string]interface{}) (map[string]interface{}, error) {
+func (r *Repo) UpdateActivity(id int64, columns map[string]interface{}) (model.ActivityGroup, error) {
 	_, err := r.GetActivity(id)
-	if err == sql.ErrNoRows {
-		return nil, model.ErrRecordNotFound
+	if err != nil {
+		return model.ActivityGroup{}, model.ErrRecordNotFound
 	}
 
 	sqlQuery, args, _ := sq.Update("activities").Where(sq.Eq{"id": id}).SetMap(columns).ToSql()
 
-	prep, err := r.DB.Prepare(sqlQuery)
+	res := r.DB.MustExec(sqlQuery, args...)
 	if err != nil {
-		return nil, err
-	}
-	defer prep.Close()
-
-	res, err := prep.ExecContext(context.Background(), args...)
-	if err != nil {
-		return nil, err
+		return model.ActivityGroup{}, err
 	}
 
 	affected, _ := res.RowsAffected()
@@ -98,23 +62,14 @@ func (r *Repo) UpdateActivity(id interface{}, columns map[string]interface{}) (m
 		return r.GetActivity(id)
 	}
 
-	return nil, model.ErrRecordNotFound
+	return model.ActivityGroup{}, model.ErrRecordNotFound
 }
 
 // Delete activity
-func (r *Repo) DeleteActivity(id interface{}) (bool, error) {
+func (r *Repo) DeleteActivity(id int64) (bool, error) {
 	sqlQuery, args, _ := sq.Delete("activities").Where(sq.Eq{"id": id}).ToSql()
 
-	prep, err := r.DB.Prepare(sqlQuery)
-	if err != nil {
-		return false, err
-	}
-	defer prep.Close()
-
-	res, err := prep.ExecContext(context.Background(), args...)
-	if err != nil {
-		return false, err
-	}
+	res := r.DB.MustExec(sqlQuery, args...)
 
 	affected, _ := res.RowsAffected()
 	if affected == 0 {

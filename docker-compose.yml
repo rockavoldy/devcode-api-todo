@@ -10,12 +10,12 @@ services:
     build: .
     ports:
       - 8090:3030
-    links:
-     - db
+    depends_on:
+      - db
     networks:
       - devcode
   db:
-    image: mysql:5.7
+    image: arm64v8/mysql:8.0
     restart: always
     environment:
     - MYSQL_ROOT_PASSWORD=example
@@ -28,6 +28,7 @@ services:
       - 3306:3306
     networks:
       - devcode
+
   pma:
     image: phpmyadmin:latest
     restart: always
@@ -37,7 +38,7 @@ services:
       PMA_HOST: db
       PMA_USER: root
       PMA_PASSWORD: example
-    links:
+    depends_on:
       - db
     networks:
       - devcode

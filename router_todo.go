@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -51,14 +52,15 @@ func (t *Todo) list(rw http.ResponseWriter, r *http.Request) {
 
 func (t *Todo) get(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
-	todoId := chi.URLParam(r, "todoId")
+	todoParams := chi.URLParam(r, "todoId")
+	todoId, _ := strconv.ParseInt(todoParams, 10, 64)
 	print := &model.PrintTodoItem{}
 
 	data, err := t.repo.GetTodo(todoId)
 	if err != nil {
 		print.Status = "Not Found"
-		print.Message = fmt.Sprintf("Todo with ID %s Not Found", todoId)
-		print.Data = map[string]interface{}{}
+		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
+		print.Data = model.TodoItem{}
 		rw.WriteHeader(404)
 
 		resp, _ := json.Marshal(print)
@@ -87,7 +89,7 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 	if _, ok := data["activity_group_id"]; !ok {
 		print.Status = "Bad Request"
 		print.Message = model.ErrActivityGroupIdNull.Error()
-		print.Data = map[string]interface{}{}
+		print.Data = model.TodoItem{}
 		rw.WriteHeader(400)
 		resp, _ := json.Marshal(print)
 
@@ -98,7 +100,7 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 	if _, ok := data["title"]; !ok {
 		print.Status = "Bad Request"
 		print.Message = model.ErrTitleNull.Error()
-		print.Data = map[string]interface{}{}
+		print.Data = model.TodoItem{}
 		rw.WriteHeader(400)
 		resp, _ := json.Marshal(print)
 
@@ -119,13 +121,14 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 
 func (t *Todo) delete(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
-	todoId := chi.URLParam(r, "todoId")
+	todoParams := chi.URLParam(r, "todoId")
+	todoId, _ := strconv.ParseInt(todoParams, 10, 64)
 	print := &model.PrintTodoItem{}
 
 	deleted, _ := t.repo.DeleteTodo(todoId)
 	if !deleted {
 		print.Status = "Not Found"
-		print.Message = fmt.Sprintf("Todo with ID %s Not Found", todoId)
+		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
 		rw.WriteHeader(404)
 	} else {
 		print.Status = "Success"
@@ -133,14 +136,15 @@ func (t *Todo) delete(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(200)
 	}
 
-	print.Data = map[string]interface{}{}
+	print.Data = model.TodoItem{}
 	resp, _ := json.Marshal(print)
 	rw.Write([]byte(resp))
 }
 
 func (t *Todo) update(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "Application/json")
-	todoId := chi.URLParam(r, "todoId")
+	todoParams := chi.URLParam(r, "todoId")
+	todoId, _ := strconv.ParseInt(todoParams, 10, 64)
 	print := &model.PrintTodoItem{}
 	data := make(map[string]interface{})
 
@@ -152,8 +156,8 @@ func (t *Todo) update(rw http.ResponseWriter, r *http.Request) {
 	updatedData, err := t.repo.UpdateTodo(todoId, data)
 	if err != nil {
 		print.Status = "Not Found"
-		print.Message = fmt.Sprintf("Todo with ID %s Not Found", todoId)
-		print.Data = map[string]interface{}{}
+		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
+		print.Data = model.TodoItem{}
 		rw.WriteHeader(404)
 		resp, _ := json.Marshal(print)
 
