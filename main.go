@@ -31,7 +31,7 @@ var lc = net.ListenConfig{
 func Logger() func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			log.Println("from: ", os.Getpid())
+			// log.Println("from: ", os.Getpid())
 			next.ServeHTTP(w, r)
 		}
 

@@ -60,7 +60,7 @@ func (a *Activity) get(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
-		print.Data = model.ActivityGroup{}
+		print.Data = map[string]interface{}{}
 		rw.WriteHeader(404)
 
 		resp, _ := json.Marshal(print)
@@ -70,7 +70,7 @@ func (a *Activity) get(rw http.ResponseWriter, r *http.Request) {
 
 	print.Status = "Success"
 	print.Message = "Success"
-	print.Data = data
+	print.Data = data.MapToInterface()
 	rw.WriteHeader(200)
 	resp, _ := json.Marshal(print)
 	rw.Write([]byte(resp))
@@ -89,7 +89,7 @@ func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 	if _, titleOk := data["title"]; !titleOk {
 		print.Status = "Bad Request"
 		print.Message = model.ErrTitleNull.Error()
-		print.Data = model.ActivityGroup{}
+		print.Data = map[string]interface{}{}
 		rw.WriteHeader(400)
 		resp, _ := json.Marshal(print)
 
@@ -98,11 +98,10 @@ func (a *Activity) create(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	dataInsert, _ := a.repo.InsertActivity(data)
-	log.Println(dataInsert)
 
 	print.Status = "Success"
 	print.Message = "Success"
-	print.Data = dataInsert
+	print.Data = dataInsert.MapToInterface()
 	rw.WriteHeader(201)
 	resp, _ := json.Marshal(print)
 
@@ -126,7 +125,7 @@ func (a *Activity) delete(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(200)
 	}
 
-	print.Data = model.ActivityGroup{}
+	print.Data = map[string]interface{}{}
 	resp, _ := json.Marshal(print)
 	rw.Write([]byte(resp))
 }
@@ -147,7 +146,7 @@ func (a *Activity) update(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Activity with ID %d Not Found", activityId)
-		print.Data = model.ActivityGroup{}
+		print.Data = map[string]interface{}{}
 		rw.WriteHeader(404)
 		resp, _ := json.Marshal(print)
 
@@ -158,7 +157,7 @@ func (a *Activity) update(rw http.ResponseWriter, r *http.Request) {
 	print.Status = "Success"
 	print.Message = "Success"
 	rw.WriteHeader(200)
-	print.Data = updatedData
+	print.Data = updatedData.MapToInterface()
 	resp, _ := json.Marshal(print)
 	rw.Write([]byte(resp))
 }

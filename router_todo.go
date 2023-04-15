@@ -60,7 +60,7 @@ func (t *Todo) get(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
-		print.Data = model.TodoItem{}
+		print.Data = map[string]interface{}{}
 		rw.WriteHeader(404)
 
 		resp, _ := json.Marshal(print)
@@ -70,7 +70,7 @@ func (t *Todo) get(rw http.ResponseWriter, r *http.Request) {
 
 	print.Status = "Success"
 	print.Message = "Success"
-	print.Data = data
+	print.Data = data.MapToInterface()
 	rw.WriteHeader(200)
 	resp, _ := json.Marshal(print)
 	rw.Write([]byte(resp))
@@ -89,7 +89,7 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 	if _, ok := data["activity_group_id"]; !ok {
 		print.Status = "Bad Request"
 		print.Message = model.ErrActivityGroupIdNull.Error()
-		print.Data = model.TodoItem{}
+		print.Data = map[string]interface{}{}
 		rw.WriteHeader(400)
 		resp, _ := json.Marshal(print)
 
@@ -100,7 +100,7 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 	if _, ok := data["title"]; !ok {
 		print.Status = "Bad Request"
 		print.Message = model.ErrTitleNull.Error()
-		print.Data = model.TodoItem{}
+		print.Data = map[string]interface{}{}
 		rw.WriteHeader(400)
 		resp, _ := json.Marshal(print)
 
@@ -112,7 +112,7 @@ func (t *Todo) create(rw http.ResponseWriter, r *http.Request) {
 
 	print.Status = "Success"
 	print.Message = "Success"
-	print.Data = dataInsert
+	print.Data = dataInsert.MapToInterface()
 	rw.WriteHeader(201)
 	resp, _ := json.Marshal(print)
 
@@ -136,7 +136,7 @@ func (t *Todo) delete(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(200)
 	}
 
-	print.Data = model.TodoItem{}
+	print.Data = map[string]interface{}{}
 	resp, _ := json.Marshal(print)
 	rw.Write([]byte(resp))
 }
@@ -157,7 +157,7 @@ func (t *Todo) update(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		print.Status = "Not Found"
 		print.Message = fmt.Sprintf("Todo with ID %d Not Found", todoId)
-		print.Data = model.TodoItem{}
+		print.Data = map[string]interface{}{}
 		rw.WriteHeader(404)
 		resp, _ := json.Marshal(print)
 
@@ -168,7 +168,7 @@ func (t *Todo) update(rw http.ResponseWriter, r *http.Request) {
 	print.Status = "Success"
 	print.Message = "Success"
 	rw.WriteHeader(200)
-	print.Data = updatedData
+	print.Data = updatedData.MapToInterface()
 	resp, _ := json.Marshal(print)
 	rw.Write([]byte(resp))
 }

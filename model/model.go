@@ -23,9 +23,9 @@ type ActivityGroup struct {
 }
 
 type PrintActivityGroup struct {
-	Status  string        `json:"status"`
-	Message string        `json:"message"`
-	Data    ActivityGroup `json:"data"`
+	Status  string                 `json:"status"`
+	Message string                 `json:"message"`
+	Data    map[string]interface{} `json:"data"`
 }
 
 type PrintActivityGroups struct {
@@ -117,9 +117,9 @@ type TodoItem struct {
 }
 
 type PrintTodoItem struct {
-	Status  string   `json:"status"`
-	Message string   `json:"message"`
-	Data    TodoItem `json:"data"`
+	Status  string                 `json:"status"`
+	Message string                 `json:"message"`
+	Data    map[string]interface{} `json:"data"`
 }
 
 type PrintTodoItems struct {
